@@ -1,0 +1,10 @@
+*.out
+.envrc
+# Ignore object files
+*.o
+
+# Ignore .direnv directories
+.direnv
+
+# Ignore the compiled program executable
+program
