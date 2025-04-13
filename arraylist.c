@@ -18,7 +18,7 @@ void init_arraylist(void** particles, int num_of_particles) {
     float y_init = box_length/4;
 
     original_particle.radius = 0.01;
-    original_particle.mass = 1;
+    original_particle.mass = 10;
     original_particle.charge = 0.05;
     original_particle.id = 0;
 
@@ -36,13 +36,10 @@ void init_arraylist(void** particles, int num_of_particles) {
         if (i % i_max == 0) {
             x = x_init;
         }
-                printf("x %f\n", (x - x_init) / (2 * particle -> radius));
-                printf("y %f\n\n", (y - y_init) / (2 * particle -> radius));
-
                 particle -> position[0] = x;
                 particle -> position[1] = y;
-                particle -> velocity[0] = 0;//(float) random() / RAND_MAX;
-                particle -> velocity[1] = 0;//(float) random() / RAND_MAX;
+                particle -> velocity[0] = (float) random() / RAND_MAX;
+                particle -> velocity[1] = (float) random() / RAND_MAX;
                 particle -> id = i;
         }
 }

@@ -6,7 +6,7 @@
 #ifndef arraylist_header
 #define arraylist_header
 
-#define NUM_PARTICLES 100
+#define NUM_PARTICLES 500
 
 void* particles[NUM_PARTICLES] = { NULL };
 
