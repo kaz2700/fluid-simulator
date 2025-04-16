@@ -22,7 +22,7 @@ void close_sdl();
 void drawParticle(Particle* particle);
 void drawHalo(Particle* particle);
 float* translate_position(float* position);
-void draw(Particle* particles[], int num_of_particles);
+void draw();
 SDL_Texture* createParticleTexture();
 SDL_Texture* createHaloTexture();
 

@@ -2,6 +2,7 @@
 #include "artist.h"
 #include <stdio.h>
 #include "math_functions.h"
+#include "arraylist.h"
 
 int SCREEN_WIDTH = 600;
 int SCREEN_HEIGHT = 600;
@@ -64,14 +65,16 @@ float* translate_position(float* position) {
     return translated_position;
 }
 
-void draw(Particle* particles[], int num_of_particles){
+void draw(){
     //clear screen
     SDL_SetRenderDrawColor(renderer,0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    for(int i = 0; i < num_of_particles; i++) {
+    Node* currentNode = getHeadNode();
+    while (currentNode != NULL) {
         //drawParticle(particles[i]);
-        drawHalo(particles[i]);
+        drawHalo(currentNode->particle);
+        currentNode = currentNode->next;
     }
 
     SDL_RenderPresent(renderer);

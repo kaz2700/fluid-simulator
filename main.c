@@ -4,7 +4,6 @@
 #include "particle.h"
 #include <unistd.h>
 #include "artist.h"
-#include <time.h>
 #include "arraylist.h"
 
 float dt = 0.01; //seconds
@@ -15,9 +14,7 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
 
-    init_arraylist(particles, NUM_PARTICLES);
-
-    Particle** part = (Particle**) particles;
+    createParticleList(300);
 
     int quit = 0;
     SDL_Event e;
@@ -26,8 +23,8 @@ int main( int argc, char* args[] ) {
             if( e.type == SDL_QUIT )
                 quit = 1;
 
-        tick(part, dt, NUM_PARTICLES);
-        draw(part, NUM_PARTICLES);
+        tick(dt);
+        draw();
         
         usleep(1000000 * dt); //microseconds
     }

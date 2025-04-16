@@ -1,15 +1,21 @@
 #include <SDL2/SDL.h>
 #include <stddef.h>
 #include <stdio.h>
-
+#include <threads.h>
+#include "particle.h"
 
 #ifndef arraylist_header
 #define arraylist_header
+#define NUM_PARTICLES 300
 
-#define NUM_PARTICLES 500
+typedef struct Node {
+    Particle* particle;
+    struct Node* next;
+} Node;
 
-void* particles[NUM_PARTICLES] = { NULL };
-
-void init_arraylist(void** particles, int num_of_particles);
+Particle* getParticleFromIndex(int index);
+void addToLinkedList(Particle* particle);
+void createParticleList(int num_of_particles);
+Node* getHeadNode();
 
 #endif

@@ -8,7 +8,6 @@ struct {
     float radius;
     float mass;
     float charge;
-    int id;
 } typedef Particle;
 
 #endif // ADDITIONAL_H
