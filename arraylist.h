@@ -6,7 +6,6 @@
 
 #ifndef arraylist_header
 #define arraylist_header
-#define NUM_PARTICLES 300
 
 typedef struct Node {
     Particle* particle;

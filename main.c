@@ -14,7 +14,7 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
 
-    createParticleList(300);
+    createParticleList(2);
 
     int quit = 0;
     SDL_Event e;

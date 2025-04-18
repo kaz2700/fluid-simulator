@@ -12,7 +12,8 @@ SDL_Renderer* renderer = NULL;
 
 float box_length = 1; //meters
 float particle_radius;
-float radius_multiplier;
+float halo_multiplier;
+float resizing_factor;
 SDL_Texture* particleTexture;
 SDL_Texture* haloTexture;
 
@@ -35,8 +36,10 @@ int init() {
         printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
         return 0;
     }
-    radius_multiplier = SCREEN_WIDTH / box_length * 35;
+
+    halo_multiplier = 35;
     particle_radius = 0.01;
+    resizing_factor = SCREEN_WIDTH/box_length;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -72,8 +75,8 @@ void draw(){
 
     Node* currentNode = getHeadNode();
     while (currentNode != NULL) {
-        //drawParticle(particles[i]);
-        drawHalo(currentNode->particle);
+        drawParticle(currentNode->particle);
+        //drawHalo(currentNode->particle);
         currentNode = currentNode->next;
     }
 
@@ -81,7 +84,8 @@ void draw(){
 }
 
 SDL_Texture* createParticleTexture() {
-    SDL_Texture* circleTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 2 * particle_radius, 2 * particle_radius);
+    int radius = particle_radius * resizing_factor;
+    SDL_Texture* circleTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 2 * radius, 2 * radius);
     SDL_SetTextureBlendMode(circleTex, SDL_BLENDMODE_BLEND);     //this enables blending in order for alpha to work when drawing
 
     SDL_SetRenderTarget(renderer, circleTex);
@@ -90,21 +94,20 @@ SDL_Texture* createParticleTexture() {
     SDL_RenderClear(renderer);
 
     // Draw white filled circle
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int i = -particle_radius; i <= particle_radius; i++) {
-        float h = sqrt(particle_radius * particle_radius - i * i);
+    float alpha;
+    float r;
+    for (int i = -radius; i <= radius; i++) {
+        float h = sqrt(radius * radius - i * i);
         for (int j = -h; j <= h; j++) {
-            SDL_RenderDrawPoint(renderer, particle_radius + i, particle_radius + j);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderDrawPoint(renderer, radius + i, radius + j);
         }
     }
-
-    SDL_SetRenderTarget(renderer, NULL);
-
     return circleTex;
 }
 
 SDL_Texture* createHaloTexture() {
-    int radius = radius_multiplier * particle_radius;
+    int radius = resizing_factor * halo_multiplier * particle_radius;
     SDL_Texture* circleTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 2 * radius, 2 * radius);
     SDL_SetTextureBlendMode(circleTex, SDL_BLENDMODE_BLEND);     //this enables blending in order for alpha to work when drawing
 
@@ -136,10 +139,10 @@ void drawParticle(Particle* particle) {
     float* translated_position = translate_position(particle -> position);
 
     SDL_Rect dst = {
-    .x = translated_position[0] - particle_radius,
-    .y = translated_position[1] - particle_radius,
-    .w = 2 * particle_radius,
-    .h = 2 * particle_radius
+    .x = translated_position[0] - particle_radius * resizing_factor,
+    .y = translated_position[1] - particle_radius * resizing_factor,
+    .w = 2 * particle_radius * resizing_factor,
+    .h = 2 * particle_radius * resizing_factor
     };
 
     int r = (int) 150 * vector_norm(particle -> velocity);
@@ -152,10 +155,10 @@ void drawHalo(Particle* particle) {
     float* translated_position = translate_position(particle -> position);
 
     SDL_Rect dst = {
-    .x = translated_position[0] - radius_multiplier * particle_radius,
-    .y = translated_position[1] - radius_multiplier * particle_radius,
-    .w = 2 * radius_multiplier * particle_radius,
-    .h = 2 * radius_multiplier * particle_radius
+    .x = translated_position[0] - resizing_factor * halo_multiplier * particle_radius,
+    .y = translated_position[1] - resizing_factor * halo_multiplier * particle_radius,
+    .w = 2 * resizing_factor * halo_multiplier * particle_radius,
+    .h = 2 * resizing_factor * halo_multiplier * particle_radius
     };
 
     SDL_SetTextureColorMod(haloTexture, 255, 255, 255);  // for tinting
