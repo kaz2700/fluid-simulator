@@ -8,13 +8,14 @@
 #define arraylist_header
 
 typedef struct Node {
-    Particle* particle;
+    void* item;
     struct Node* next;
 } Node;
 
-Particle* getParticleFromIndex(int index);
-void addToLinkedList(Particle* particle);
+Particle* getItemFromIndex(int index);
+void addToLinkedList(Node** listHead, void* item);
 void createParticleList(int num_of_particles);
+void createSpacePartitions(int num_of_partitions);
 Node* getHeadNode();
-
+extern int spacePartitions;
 #endif

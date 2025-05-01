@@ -4,15 +4,17 @@
 #include "artist.h"
 #include "arraylist.h"
 
-Node* head = NULL;
+Node* particleHead = NULL;
+Node* spaceHead = NULL;
+int spacePartitions = 0;
 
-Particle* getParticleFromIndex(int index) {
+Particle* getItemFromIndex(int index) {
     int i = 0;
-    Node* current = head;
+    Node* current = particleHead;
 
     while (current != NULL) {
         if (index == i)
-            return current->particle;
+            return current->item;
 
         current = current->next;
         i++;
@@ -21,22 +23,31 @@ Particle* getParticleFromIndex(int index) {
     return NULL;
 }
 
-void addToLinkedList(Particle* particle) {
+void addToLinkedList(Node** listHead, void* item) {
     Node* newNode = malloc(sizeof(Node));
-    newNode->particle = particle; 
+    newNode->item = item; 
     newNode->next = NULL;
 
-    if (head == NULL) {
-        head = newNode;
+    if (*listHead == NULL) {
+        *listHead = newNode;
+        printf("head\n");
         return;
     }
 
-    Node* current = head;
+    Node* current = *listHead;
 
-    while (current->next != NULL)
+    while (current->next != NULL) //TODO can remove next?
         current = current->next;
-
     current->next = newNode;
+    printf("next\n");
+
+} 
+
+void createSpacePartitions(int num_of_partitions) {
+    spacePartitions = num_of_partitions;
+    for (int i = 0; i < num_of_partitions; i++) {
+        addToLinkedList(&spaceHead, NULL);
+    }
 }
 
 void createParticleList(int num_of_particles) {
@@ -69,10 +80,11 @@ void createParticleList(int num_of_particles) {
         particle->velocity[0] = (float) random() / RAND_MAX;
         particle->velocity[1] = (float) random() / RAND_MAX;
 
-        addToLinkedList(particle);
+        addToLinkedList(&particleHead, particle);
     }
+
 }
 
 Node* getHeadNode() {
-    return head;
+    return particleHead;
 }

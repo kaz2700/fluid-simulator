@@ -75,7 +75,7 @@ void draw(){
 
     Node* currentNode = getHeadNode();
     while (currentNode != NULL) {
-        drawParticle(currentNode->particle);
+        drawParticle((Particle*) currentNode->item);
         //drawHalo(currentNode->particle);
         currentNode = currentNode->next;
     }

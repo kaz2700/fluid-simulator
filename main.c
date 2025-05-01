@@ -1,7 +1,6 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include "physics.h"
-#include "particle.h"
 #include <unistd.h>
 #include "artist.h"
 #include "arraylist.h"
@@ -14,8 +13,10 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
 
-    createParticleList(2);
+    createSpacePartitions(4); //first create spacepartitions
+    createParticleList(1);
 
+    
     int quit = 0;
     SDL_Event e;
     while( !quit ) {
@@ -25,7 +26,7 @@ int main( int argc, char* args[] ) {
 
         tick(dt);
         draw();
-        
+
         usleep(1000000 * dt); //microseconds
     }
 

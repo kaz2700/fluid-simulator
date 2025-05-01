@@ -3,7 +3,7 @@
 #include "artist.h"
 #include <stdio.h>
 #include "math_functions.h"
-#include <math.h>
+#include "space_partition.h"
 #include "arraylist.h"
 
 float collision_energy_transmission = 1;
@@ -20,6 +20,9 @@ void update_positions(Particle* particle, float dt) {
 
     particle->position[0] = particle->position[0] + particle->velocity[0] * dt;
     particle->position[1] = particle->position[1] + particle->velocity[1] * dt;
+
+    //"%f", particle->position[1]);
+
 }
 
 void check_limits(Particle* particle, float dt) {
@@ -57,13 +60,14 @@ void collision(Particle* particle1, Particle* particle2) {
 }
 
 void update_acceleration(Node* current, float dt) {
-    current->particle->acceleration[0] = 0;
-    current->particle->acceleration[1] = -gravity;
+    Particle* particle = (Particle*) current->item;
+    particle->acceleration[0] = 0;
+    particle->acceleration[1] = -gravity;
 
     Node* otherParticleNode = current->next;
     while(otherParticleNode != NULL) {
         if (current != otherParticleNode)
-            check_collision(current->particle, otherParticleNode->particle, dt);
+            check_collision(particle, (Particle*) otherParticleNode->item, dt);
 
         otherParticleNode = otherParticleNode->next;
     } 
@@ -74,7 +78,9 @@ void tick(float dt) {
     Node* current = getHeadNode();
     while (current != NULL) {
         update_acceleration(current, dt);
-        update_positions(current->particle, dt);
+        update_positions(current->item, dt);
+        getSpacePartition(current);
+
 
         current = current->next; //think, this could do more efficiency
     }
