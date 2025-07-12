@@ -15,7 +15,9 @@ typedef struct Node {
 Particle* getItemFromIndex(int index);
 void addToLinkedList(Node** listHead, void* item);
 void createParticleList(int num_of_particles);
+void removeFromLinkedList(Node** listHead, Node* removingItem);
 void createSpacePartitions(int num_of_partitions);
-Node* getHeadNode();
+Node* getParticleHeadNode();
+Node* getSpacePartitionHeadNode();
 extern int spacePartitions;
 #endif

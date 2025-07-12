@@ -2,3 +2,4 @@ arrays/vector for the 3d vector position and for multiple particles
 change coords so O is at bottom left
 viscosity
 if particle trapped on bottom velocity only change sign if its velocity its going down
+free memory when removing particle????????????

@@ -30,7 +30,7 @@ int init() {
         return 0;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, 0);
+renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     
     if ( renderer == NULL ) {
         printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -73,11 +73,15 @@ void draw(){
     SDL_SetRenderDrawColor(renderer,0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    Node* currentNode = getHeadNode();
-    while (currentNode != NULL) {
-        drawParticle((Particle*) currentNode->item);
-        //drawHalo(currentNode->particle);
-        currentNode = currentNode->next;
+    Node* currentSpacePartition = getSpacePartitionHeadNode();
+    while (currentSpacePartition != NULL) {
+        Node* current = currentSpacePartition->item;
+        while(current != NULL) {
+            drawParticle((Particle*) current->item);
+            //drawHalo(currentNode->particle);
+            current = current->next;
+        }
+        currentSpacePartition = currentSpacePartition->next;
     }
 
     SDL_RenderPresent(renderer);

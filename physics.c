@@ -75,13 +75,17 @@ void update_acceleration(Node* current, float dt) {
     //todo add viscosity
 
 void tick(float dt) {
-    Node* current = getHeadNode();
-    while (current != NULL) {
-        update_acceleration(current, dt);
-        update_positions(current->item, dt);
-        getSpacePartition(current);
+    Node* currentSpacePartition = getSpacePartitionHeadNode();
+    while (currentSpacePartition != NULL) {
+        Node* current = currentSpacePartition->item;
+        while(current != NULL) {
+            update_acceleration(current, dt);
+            update_positions(current->item, dt);
+            assignSpacePartition(current->item);
 
+            current = current->next; //think, this could do more efficiency
+        }
 
-        current = current->next; //think, this could do more efficiency
+        currentSpacePartition = currentSpacePartition->next;
     }
 }

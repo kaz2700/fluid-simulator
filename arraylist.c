@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "artist.h"
 #include "arraylist.h"
+#include "space_partition.h"
 
 Node* particleHead = NULL;
 Node* spaceHead = NULL;
@@ -39,8 +40,24 @@ void addToLinkedList(Node** listHead, void* item) {
     while (current->next != NULL) //TODO can remove next?
         current = current->next;
     current->next = newNode;
-    printf("next\n");
+} 
 
+void removeFromLinkedList(Node** listHead, Node* removingItem) {
+    if (*listHead == NULL) {
+        printf("error: empty LinkedList\n");
+        return;
+    }
+
+    Node* current = *listHead;
+
+    while (current->next != NULL) {
+        if (current->next == removingItem) {
+            current->next = current->next->next;
+            printf("removed\n");
+            return;
+        }
+        current = current->next;
+    }
 } 
 
 void createSpacePartitions(int num_of_partitions) {
@@ -80,11 +97,15 @@ void createParticleList(int num_of_particles) {
         particle->velocity[0] = (float) random() / RAND_MAX;
         particle->velocity[1] = (float) random() / RAND_MAX;
 
-        addToLinkedList(&particleHead, particle);
+        assignSpacePartition(particle);
     }
 
 }
 
-Node* getHeadNode() {
+Node* getParticleHeadNode() {
     return particleHead;
+}
+
+Node* getSpacePartitionHeadNode() {
+    return spaceHead;
 }
