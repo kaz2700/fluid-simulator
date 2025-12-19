@@ -5,44 +5,34 @@
 #include "arraylist.h"
 #include "space_partition.h"
 
-Node* particleHead = NULL;
-Node* spaceHead = NULL;
-int spacePartitions = 0;
-
-Particle* getItemFromIndex(int index) {
+void* getFromList(Node* headNode, int index) {
     int i = 0;
-    Node* current = particleHead;
+    Node* current = headNode;
 
     while (current != NULL) {
         if (index == i)
             return current->item;
-
         current = current->next;
         i++;
     }
-
     return NULL;
 }
 
-void addToLinkedList(Node** listHead, void* item) {
-    Node* newNode = malloc(sizeof(Node));
-    newNode->item = item; 
-    newNode->next = NULL;
-
+void addToList(Node** listHead, Node* newNode) { 
     if (*listHead == NULL) {
         *listHead = newNode;
-        printf("head\n");
         return;
     }
 
     Node* current = *listHead;
 
-    while (current->next != NULL) //TODO can remove next?
+    while (current->next != NULL) {
         current = current->next;
+    }
     current->next = newNode;
 } 
 
-void removeFromLinkedList(Node** listHead, Node* removingItem) {
+void removeFromList(Node** listHead, Node* removingNode) {
     if (*listHead == NULL) {
         printf("error: empty LinkedList\n");
         return;
@@ -50,62 +40,37 @@ void removeFromLinkedList(Node** listHead, Node* removingItem) {
 
     Node* current = *listHead;
 
-    while (current->next != NULL) {
-        if (current->next == removingItem) {
-            current->next = current->next->next;
-            printf("removed\n");
+    if (current == removingNode) {
+        Node* toRemove = *listHead;
+        *listHead = toRemove->next;
+        free(toRemove);
+        printf("removed head\n");
+        return;
+    }
+
+    int i = 0;
+
+     while (current->next != NULL) {
+        if (current->next == removingNode) {
+            Node* toRemove = current->next;
+            current->next = toRemove->next;
+            free(toRemove);
+            printf("removed index %d\n", i);
             return;
         }
         current = current->next;
+        i++;
     }
+
+    printf("error: index out of range\n");
 } 
 
-void createSpacePartitions(int num_of_partitions) {
-    spacePartitions = num_of_partitions;
-    for (int i = 0; i < num_of_partitions; i++) {
-        addToLinkedList(&spaceHead, NULL);
+int getListLength(Node* head) {
+    int length = 0;
+    Node* node = head;
+    while (node != NULL) {
+        length++;
+        node = node->next;
     }
-}
-
-void createParticleList(int num_of_particles) {
-    Particle original_particle;
-
-    float x_init =  box_length/4;
-    float y_init = box_length/4;
-
-    original_particle.radius = 0.01;
-    original_particle.mass = 10;
-    original_particle.charge = 0.05;
-
-    int i_max = 3;
-
-    float x = x_init;
-    float y = y_init;
-
-    for(int i = 0; i < num_of_particles; i++) {
-        Particle* particle = malloc(sizeof(Particle));
-        *particle = original_particle;
-
-        x = x_init + 2 * particle->radius * (i % i_max);
-        y = y_init + 2 * particle->radius * (i / i_max);
-
-        if (i % i_max == 0)
-            x = x_init;
-
-        particle->position[0] = x;
-        particle->position[1] = y;
-        particle->velocity[0] = (float) random() / RAND_MAX;
-        particle->velocity[1] = (float) random() / RAND_MAX;
-
-        assignSpacePartition(particle);
-    }
-
-}
-
-Node* getParticleHeadNode() {
-    return particleHead;
-}
-
-Node* getSpacePartitionHeadNode() {
-    return spaceHead;
+    return length;
 }

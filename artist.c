@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "math_functions.h"
 #include "arraylist.h"
+#include "space_partition.h"
 
 int SCREEN_WIDTH = 600;
 int SCREEN_HEIGHT = 600;
@@ -73,7 +74,7 @@ void draw(){
     SDL_SetRenderDrawColor(renderer,0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    Node* currentSpacePartition = getSpacePartitionHeadNode();
+    Node* currentSpacePartition = getSpacePartitionList();
     while (currentSpacePartition != NULL) {
         Node* current = currentSpacePartition->item;
         while(current != NULL) {

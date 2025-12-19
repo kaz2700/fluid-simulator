@@ -11,7 +11,9 @@ float collision_energy_transmission_walls = 0.75;
 float gravity = 0;
 float k = 1;
 
-void update_positions(Particle* particle, float dt) {
+void update_positions(Node* particleNode, float dt) {
+    Particle* particle = particleNode->item;
+    Node* previous_space_partition = getSpacePartitionFromParticleNode(particleNode);
 
     particle->velocity[0] = particle->velocity[0] + particle->acceleration[0] * dt;
     particle->velocity[1] = particle->velocity[1] + particle->acceleration[1] * dt;
@@ -21,8 +23,10 @@ void update_positions(Particle* particle, float dt) {
     particle->position[0] = particle->position[0] + particle->velocity[0] * dt;
     particle->position[1] = particle->position[1] + particle->velocity[1] * dt;
 
-    //"%f", particle->position[1]);
+    Node* new_space_partition = getSpacePartitionFromParticleNode(particleNode);
 
+    if (previous_space_partition != new_space_partition)
+        assignSpacePartition(particleNode, previous_space_partition, new_space_partition);
 }
 
 void check_limits(Particle* particle, float dt) {
@@ -68,24 +72,21 @@ void update_acceleration(Node* current, float dt) {
     while(otherParticleNode != NULL) {
         if (current != otherParticleNode)
             check_collision(particle, (Particle*) otherParticleNode->item, dt);
-
         otherParticleNode = otherParticleNode->next;
     } 
 }
     //todo add viscosity
 
 void tick(float dt) {
-    Node* currentSpacePartition = getSpacePartitionHeadNode();
+    Node* currentSpacePartition = getSpacePartitionList();
     while (currentSpacePartition != NULL) {
-        Node* current = currentSpacePartition->item;
-        while(current != NULL) {
-            update_acceleration(current, dt);
-            update_positions(current->item, dt);
-            assignSpacePartition(current->item);
+        Node* particleNode = currentSpacePartition->item;
+        while(particleNode != NULL) {
+            update_acceleration(particleNode, dt);
+            update_positions(particleNode, dt);
 
-            current = current->next; //think, this could do more efficiency
+            particleNode = particleNode->next; //think, this could do more efficiency
         }
-
         currentSpacePartition = currentSpacePartition->next;
     }
 }

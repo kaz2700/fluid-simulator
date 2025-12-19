@@ -12,12 +12,8 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
-Particle* getItemFromIndex(int index);
-void addToLinkedList(Node** listHead, void* item);
-void createParticleList(int num_of_particles);
-void removeFromLinkedList(Node** listHead, Node* removingItem);
-void createSpacePartitions(int num_of_partitions);
-Node* getParticleHeadNode();
-Node* getSpacePartitionHeadNode();
-extern int spacePartitions;
+void* getFromList(Node* headNode, int index);
+void addToList(Node** listHead, Node* newNode);
+void removeFromList(Node** listHead, Node* removingNode);
+int getListLength(Node* node);
 #endif

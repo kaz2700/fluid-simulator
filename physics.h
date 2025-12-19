@@ -10,7 +10,7 @@ extern float collision_energy_transmission;
 extern float gravity;
 extern float k;
 
-void update_positions(Particle* particle, float dt);
+void update_positions(Node* particleNode, float dt);
 void check_limits(Particle* particle, float dt);
 void check_collision(Particle* particle1, Particle* particle2, float dt);
 void collision(Particle* particle1, Particle* particle2);

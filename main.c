@@ -4,19 +4,21 @@
 #include <unistd.h>
 #include "artist.h"
 #include "arraylist.h"
+#include "space_partition.h"
 
-float dt = 0.01; //seconds
+float dt = 0.1; //seconds
 
 int main( int argc, char* args[] ) {
 	if ( !init() ) {
 		printf( "Failed to initialize!\n" );
         return 0;
 	}
+    createSpacePartitions(4); //this first
+    //createParticleList(1);
 
-    createSpacePartitions(4); //first create spacepartitions
-    createParticleList(1);
+    int l = getListLength(getSpacePartitionList());
+    printf("SpacePartitionListLength: %d\n", l);
 
-    
     int quit = 0;
     SDL_Event e;
     while( !quit ) {
