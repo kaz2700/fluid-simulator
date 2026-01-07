@@ -39,7 +39,7 @@ renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERE
     }
 
     halo_multiplier = 35;
-    particle_radius = 0.01;
+    particle_radius = 0.0001;
     resizing_factor = SCREEN_WIDTH/box_length;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -78,8 +78,8 @@ void draw(){
     while (currentSpacePartition != NULL) {
         Node* current = currentSpacePartition->item;
         while(current != NULL) {
-            drawParticle((Particle*) current->item);
-            //drawHalo(currentNode->particle);
+            //drawParticle((Particle*) current->item);
+            drawHalo((Particle*) current->item);
             current = current->next;
         }
         currentSpacePartition = currentSpacePartition->next;

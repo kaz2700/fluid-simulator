@@ -8,12 +8,13 @@
 
 float collision_energy_transmission = 1;
 float collision_energy_transmission_walls = 0.75;
-float gravity = 0;
+float gravity = 10;
 float k = 1;
 
 void update_positions(Node* particleNode, float dt) {
     Particle* particle = particleNode->item;
     Node* previous_space_partition = getSpacePartitionFromParticleNode(particleNode);
+
 
     particle->velocity[0] = particle->velocity[0] + particle->acceleration[0] * dt;
     particle->velocity[1] = particle->velocity[1] + particle->acceleration[1] * dt;
@@ -24,7 +25,6 @@ void update_positions(Node* particleNode, float dt) {
     particle->position[1] = particle->position[1] + particle->velocity[1] * dt;
 
     Node* new_space_partition = getSpacePartitionFromParticleNode(particleNode);
-
     if (previous_space_partition != new_space_partition)
         assignSpacePartition(particleNode, previous_space_partition, new_space_partition);
 }
@@ -41,7 +41,20 @@ void check_limits(Particle* particle, float dt) {
 
 void check_collision(Particle* particle1, Particle* particle2, float dt) {
     if(distance_on_motion(particle1, particle2, dt) <= particle1->radius + particle2->radius) {
-        collision(particle1, particle2);
+        // Only collide if particles are approaching each other
+        // Calculate relative position and velocity
+        float dx = particle2->position[0] - particle1->position[0];
+        float dy = particle2->position[1] - particle1->position[1];
+        float dvx = particle1->velocity[0] - particle2->velocity[0];
+        float dvy = particle1->velocity[1] - particle2->velocity[1];
+        
+        // Dot product of relative velocity and relative position
+        // If positive, particles are approaching; if negative, they're separating
+        float approaching = dx * dvx + dy * dvy;
+        
+        if (approaching > 0) {
+            collision(particle1, particle2);
+        }
     }
 }
 

@@ -3,11 +3,9 @@
 #define space_partition_header
 
 void assignSpacePartition(Node* item, Node* previous_space_partition, Node* new_space_partition);
-void addToSpacePartition(Node* spacePartition, Node* particleNode);
 Node* getSpacePartitionFromParticleNode(Node* particleNode);
 void createSpacePartitions(int num_of_partitions);
 Node* createParticleList(int num_of_particles);
-Node* getParticleList();
 Node* getSpacePartitionList();
 
 

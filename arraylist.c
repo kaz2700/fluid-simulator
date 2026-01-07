@@ -19,6 +19,7 @@ void* getFromList(Node* headNode, int index) {
 }
 
 void addToList(Node** listHead, Node* newNode) { 
+    newNode->next = NULL;
     if (*listHead == NULL) {
         *listHead = newNode;
         return;

@@ -6,7 +6,7 @@
 #include "arraylist.h"
 #include "space_partition.h"
 
-float dt = 0.1; //seconds
+float dt = 0.01; //seconds
 
 int main( int argc, char* args[] ) {
 	if ( !init() ) {
@@ -14,7 +14,7 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
     createSpacePartitions(4); //this first
-    //createParticleList(1);
+    createParticleList(2000);
 
     int l = getListLength(getSpacePartitionList());
     printf("SpacePartitionListLength: %d\n", l);

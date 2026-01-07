@@ -4,7 +4,6 @@
 #include <math.h>
 
 Node* spacePartitionHeadNode;
-Node* particleHeadNode;
 int spacePartitions = 0;
 
 Node* getSpacePartitionFromParticleNode(Node* particleNode) {
@@ -26,21 +25,15 @@ Node* getSpacePartitionFromParticleNode(Node* particleNode) {
         int i = 0;
         while (i != partitionId) {
             spacePartition = spacePartition->next;
+            i++;
         }
-
-        printf("%d\nPartitionID", partitionId);
 
         return spacePartition;
 }
 
-void addToSpacePartition(Node* spacePartition, Node* particleNode) {
-    Node* partition = getSpacePartitionList();
-    addToList((Node**) &spacePartition, particleNode);
-}
-
 void assignSpacePartition(Node* particleNode, Node* previous_space_partition, Node* new_space_partition) {
-    addToSpacePartition(new_space_partition, particleNode);
-    removeFromList(&previous_space_partition, particleNode);
+    //addToSpacePartition(new_space_partition, particleNode);
+    //removeFromList(&previous_space_partition, particleNode);
 }
 
 void createSpacePartitions(int num_of_partitions) {
@@ -57,47 +50,47 @@ void createSpacePartitions(int num_of_partitions) {
 Node* createParticleList(int num_of_particles) {
     Particle original_particle;
 
-    float x_init =  box_length/4;
-    float y_init = box_length/4;
-
     original_particle.radius = 0.01;
     original_particle.mass = 10;
     original_particle.charge = 0.05;
 
-    int i_max = 3;
-
-    float x = x_init;
-    float y = y_init;
-
-    particleHeadNode = NULL;
+    // Calculate grid dimensions - square grid centered in box
+    int grid_size = (int) ceil(sqrt(num_of_particles));  // particles per row
+    float spacing = 2 * original_particle.radius;
+    float grid_width = grid_size * spacing;
+    
+    // Calculate and print max particles that fit in the box
+    int max_per_row = (int)(box_length / spacing);
+    int max_particles = max_per_row * max_per_row;
+    printf("Max particles that fit: %d (%d x %d grid)\n", max_particles, max_per_row, max_per_row);
+    
+    // Center the grid in the box
+    float x_init = (box_length - grid_width) / 2 + original_particle.radius;
+    float y_init = (box_length - grid_width) / 2 + original_particle.radius;
 
     for(int i = 0; i < num_of_particles; i++) {
         Particle* particle = malloc(sizeof(Particle));
         *particle = original_particle;
 
-        x = x_init + 2 * particle->radius * (i % i_max);
-        y = y_init + 2 * particle->radius * (i / i_max);
-
-        if (i % i_max == 0)
-            x = x_init;
+        int col = i % grid_size;
+        int row = i / grid_size;
+        float x = x_init + spacing * col;
+        float y = y_init + spacing * row;
 
         particle->position[0] = x;
         particle->position[1] = y;
         particle->velocity[0] = (float) random() / RAND_MAX;
         particle->velocity[1] = (float) random() / RAND_MAX;
-        printf("NEW PARTICLE\n");
 
-        Node* particleNode = particleHeadNode->next;
+        Node* particleNode = malloc(sizeof(Node));
         particleNode->item = particle;
 
         Node* spacePartitionNode = getSpacePartitionFromParticleNode(particleNode);
 
-        addToSpacePartition(spacePartitionNode, particleNode);
+        Node* particleHeadNode = (Node*) spacePartitionNode->item;
+        addToList(&particleHeadNode, particleNode);
+        spacePartitionNode->item = particleHeadNode;
     }
-}
-
-Node* getParticleList() {
-    return particleHeadNode;
 }
 
 Node* getSpacePartitionList() {
