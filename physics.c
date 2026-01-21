@@ -6,8 +6,8 @@
 #include "space_partition.h"
 #include "arraylist.h"
 
-float collision_energy_transmission = 1;
-float collision_energy_transmission_walls = 0.75;
+float collision_energy_transmission = 0.95;
+float collision_energy_transmission_walls = 0.95;
 float gravity = 10;
 float k = 1;
 
@@ -95,10 +95,12 @@ void tick(float dt) {
     while (currentSpacePartition != NULL) {
         Node* particleNode = currentSpacePartition->item;
         while(particleNode != NULL) {
+            Node* nextNode = particleNode->next;  // Save next BEFORE potential removal
+            
             update_acceleration(particleNode, dt);
             update_positions(particleNode, dt);
 
-            particleNode = particleNode->next; //think, this could do more efficiency
+            particleNode = nextNode;
         }
         currentSpacePartition = currentSpacePartition->next;
     }

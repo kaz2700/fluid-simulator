@@ -15,5 +15,6 @@ typedef struct Node {
 void* getFromList(Node* headNode, int index);
 void addToList(Node** listHead, Node* newNode);
 void removeFromList(Node** listHead, Node* removingNode);
+void unlinkFromList(Node** listHead, Node* unlinkingNode);
 int getListLength(Node* node);
 #endif

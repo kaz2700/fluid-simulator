@@ -32,8 +32,8 @@ Node* getSpacePartitionFromParticleNode(Node* particleNode) {
 }
 
 void assignSpacePartition(Node* particleNode, Node* previous_space_partition, Node* new_space_partition) {
-    //addToSpacePartition(new_space_partition, particleNode);
-    //removeFromList(&previous_space_partition, particleNode);
+    unlinkFromList((Node**)&previous_space_partition->item, particleNode);
+    addToList((Node**)&new_space_partition->item, particleNode);
 }
 
 void createSpacePartitions(int num_of_partitions) {
@@ -60,7 +60,9 @@ Node* createParticleList(int num_of_particles) {
     float grid_width = grid_size * spacing;
     
     // Calculate and print max particles that fit in the box
-    int max_per_row = (int)(box_length / spacing);
+    // Account for particle radius: first particle center is at radius from edge,
+    // last particle center must be at least radius from opposite edge
+    int max_per_row = (int)((box_length - 2 * original_particle.radius) / spacing) + 1;
     int max_particles = max_per_row * max_per_row;
     printf("Max particles that fit: %d (%d x %d grid)\n", max_particles, max_per_row, max_per_row);
     

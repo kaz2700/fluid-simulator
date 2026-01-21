@@ -66,6 +66,33 @@ void removeFromList(Node** listHead, Node* removingNode) {
     printf("error: index out of range\n");
 } 
 
+// Unlink a node from a list WITHOUT freeing it (for moving between lists)
+void unlinkFromList(Node** listHead, Node* unlinkingNode) {
+    if (*listHead == NULL) {
+        printf("error: empty LinkedList\n");
+        return;
+    }
+
+    Node* current = *listHead;
+
+    if (current == unlinkingNode) {
+        *listHead = current->next;
+        unlinkingNode->next = NULL;
+        return;
+    }
+
+    while (current->next != NULL) {
+        if (current->next == unlinkingNode) {
+            current->next = unlinkingNode->next;
+            unlinkingNode->next = NULL;
+            return;
+        }
+        current = current->next;
+    }
+
+    printf("error: node not found in list\n");
+}
+
 int getListLength(Node* head) {
     int length = 0;
     Node* node = head;

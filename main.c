@@ -13,8 +13,8 @@ int main( int argc, char* args[] ) {
 		printf( "Failed to initialize!\n" );
         return 0;
 	}
-    createSpacePartitions(4); //this first
-    createParticleList(2000);
+    createSpacePartitions(16); //this first
+    createParticleList(250);
 
     int l = getListLength(getSpacePartitionList());
     printf("SpacePartitionListLength: %d\n", l);
