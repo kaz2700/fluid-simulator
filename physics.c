@@ -6,7 +6,7 @@
 #include "space_partition.h"
 #include "arraylist.h"
 
-float collision_energy_transmission = 0.95;
+float collision_energy_transmission = 1;
 float collision_energy_transmission_walls = 0.95;
 float gravity = 10;
 float k = 1;
@@ -59,10 +59,6 @@ void check_collision(Particle* particle1, Particle* particle2, float dt) {
 }
 
 void collision(Particle* particle1, Particle* particle2) {
-    float x11 = particle1->position[0];
-    float x12 = particle1->position[1];
-    float x21 = particle2->position[0];
-    float x22 = particle2->position[1];
     float v11 = particle1->velocity[0];
     float v12 = particle1->velocity[1];
     float v21 = particle2->velocity[0];
@@ -70,10 +66,26 @@ void collision(Particle* particle1, Particle* particle2) {
     float m1 = particle1->mass;
     float m2 = particle2->mass;
 
-    particle1->velocity[0] = collision_energy_transmission * (v11 - 2*m2/(m1+m2) * (v11 - v21)); 
-    particle1->velocity[1] = collision_energy_transmission * (v12 - 2*m2/(m1+m2) * (v12 - v22));
-    particle2->velocity[0] = collision_energy_transmission * (v21 - 2*m1/(m1+m2) * (v21 - v11));
-    particle2->velocity[1] = collision_energy_transmission * (v22 - 2*m1/(m1+m2) * (v22 - v12));
+    // Calculate relative velocity components
+    float dvx = v11 - v21;
+    float dvy = v12 - v22;
+    
+    // Calculate relative position components
+    float dx = particle1->position[0] - particle2->position[0];
+    float dy = particle1->position[1] - particle2->position[1];
+    
+    // Calculate collision response using proper elastic collision formula
+    float dot_product = dvx * dx + dvy * dy;
+    float distance_squared = dx * dx + dy * dy;
+    
+    if (distance_squared > 0) {
+        float collision_scale = 2 * dot_product / ((m1 + m2) * distance_squared);
+        
+        particle1->velocity[0] = collision_energy_transmission * (v11 - m2 * collision_scale * dx);
+        particle1->velocity[1] = collision_energy_transmission * (v12 - m2 * collision_scale * dy);
+        particle2->velocity[0] = collision_energy_transmission * (v21 + m1 * collision_scale * dx);
+        particle2->velocity[1] = collision_energy_transmission * (v22 + m1 * collision_scale * dy);
+    }
 }
 
 void update_acceleration(Node* current, float dt) {

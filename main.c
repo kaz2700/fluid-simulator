@@ -14,7 +14,7 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
     createSpacePartitions(16); //this first
-    createParticleList(250);
+    createParticleList(500);
 
     int l = getListLength(getSpacePartitionList());
     printf("SpacePartitionListLength: %d\n", l);
