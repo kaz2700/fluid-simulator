@@ -16,8 +16,8 @@ int main( int argc, char* args[] ) {
         return 0;
 	}
     srand(time(NULL));
-    createSpacePartitions(16); //this first
-    createParticleList(500);
+    createSpacePartitions(256); //this first
+    createParticleList(10000);
 
     int l = getListLength(getSpacePartitionList());
     printf("SpacePartitionListLength: %d\n", l);

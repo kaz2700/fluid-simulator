@@ -39,7 +39,7 @@ renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     }
 
     halo_multiplier = 35;
-    particle_radius = 0.01;
+    particle_radius = 0.005;
     resizing_factor = SCREEN_WIDTH/box_length;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

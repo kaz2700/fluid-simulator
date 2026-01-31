@@ -58,10 +58,53 @@ void createSpacePartitions(int num_of_partitions) {
     }
 }
 
+Node** getNeighborPartitions(Node* partitionNode) {
+    static Node* neighbors[8];
+    int count = 0;
+
+    Node* current = getSpacePartitionList();
+    int partitionId = 0;
+    while (current != partitionNode && current != NULL) {
+        current = current->next;
+        partitionId++;
+    }
+
+    int gridLength = (int) sqrt(spacePartitions);
+    int x = partitionId % gridLength;
+    int y = partitionId / gridLength;
+
+    for (int dy = 0; dy <= 1; dy++) {
+        int dx_start = (dy == 0) ? 1 : 0;
+        for (int dx = dx_start; dx <= 1; dx++) {
+            if (dx == 0 && dy == 0) continue;
+
+            int nx = x + dx;
+            int ny = y + dy;
+
+            if (nx >= 0 && nx < gridLength && ny >= 0 && ny < gridLength) {
+                int neighborId = nx + ny * gridLength;
+                Node* neighbor = getSpacePartitionList();
+                for (int i = 0; i < neighborId && neighbor != NULL; i++) {
+                    neighbor = neighbor->next;
+                }
+                if (neighbor != NULL) {
+                    neighbors[count++] = neighbor;
+                }
+            }
+        }
+    }
+
+    while (count < 8) {
+        neighbors[count++] = NULL;
+    }
+
+    return neighbors;
+}
+
 Node* createParticleList(int num_of_particles) {
     Particle original_particle;
 
-    original_particle.radius = 0.01;
+    original_particle.radius = 0.005;
     original_particle.mass = 10;
     original_particle.charge = 0.05;
 
@@ -94,8 +137,8 @@ Node* createParticleList(int num_of_particles) {
         float x = x_init + spacing * col;
         float y = y_init + spacing * row;
 
-        particle->position[0] = x;
-        particle->position[1] = y;
+        particle->position[0] = x + ((float) random() / RAND_MAX - 0.5) * spacing * 0.5;
+        particle->position[1] = y + ((float) random() / RAND_MAX - 0.5) * spacing * 0.5;
         particle->velocity[0] = (float) random() / RAND_MAX;
         particle->velocity[1] = (float) random() / RAND_MAX;
 

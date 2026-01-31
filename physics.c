@@ -99,7 +99,56 @@ void update_acceleration(Node* current, float dt) {
     while(otherParticleNode != NULL) {
         check_collision(particle, (Particle*) otherParticleNode->item, dt);
         otherParticleNode = otherParticleNode->next;
-    } 
+    }
+
+    Node* spacePartition = getSpacePartitionFromParticleNode(current);
+    Node** neighbors = getNeighborPartitions(spacePartition);
+
+    for (int i = 0; i < 8 && neighbors[i] != NULL; i++) {
+        Node* neighborParticleNode = (Node*) neighbors[i]->item;
+        while (neighborParticleNode != NULL) {
+            check_collision(particle, (Particle*) neighborParticleNode->item, dt);
+            neighborParticleNode = neighborParticleNode->next;
+        }
+    }
+}
+
+void apply_gravity(Node* particleNode, float dt) {
+    Particle* particle = (Particle*) particleNode->item;
+    particle->velocity[0] = particle->velocity[0] + particle->acceleration[0] * dt;
+    particle->velocity[1] = particle->velocity[1] + particle->acceleration[1] * dt;
+}
+
+void move_particle(Node* particleNode, float dt) {
+    Particle* particle = (Particle*) particleNode->item;
+    particle->position[0] = particle->position[0] + particle->velocity[0] * dt;
+    particle->position[1] = particle->position[1] + particle->velocity[1] * dt;
+}
+
+void reassign_particle_partition(Node* particleNode) {
+    Particle* particle = (Particle*) particleNode->item;
+    check_limits(particle, 0.01);
+
+    Node* new_space_partition = getSpacePartitionFromParticleNode(particleNode);
+    Node* current_space_partition = NULL;
+
+    Node* spacePartitionNode = getSpacePartitionList();
+    while (spacePartitionNode != NULL) {
+        Node* particleNodeInPartition = (Node*) spacePartitionNode->item;
+        while (particleNodeInPartition != NULL) {
+            if (particleNodeInPartition == particleNode) {
+                current_space_partition = spacePartitionNode;
+                break;
+            }
+            particleNodeInPartition = particleNodeInPartition->next;
+        }
+        if (current_space_partition != NULL) break;
+        spacePartitionNode = spacePartitionNode->next;
+    }
+
+    if (current_space_partition != NULL && current_space_partition != new_space_partition) {
+        assignSpacePartition(particleNode, current_space_partition, new_space_partition);
+    }
 }
     //todo add viscosity
 
@@ -108,10 +157,24 @@ void tick(float dt) {
     while (currentSpacePartition != NULL) {
         Node* particleNode = currentSpacePartition->item;
         while(particleNode != NULL) {
-            Node* nextNode = particleNode->next;  // Save next BEFORE potential removal
-            
+            Node* nextNode = particleNode->next;
+
+            apply_gravity(particleNode, dt);
             update_acceleration(particleNode, dt);
-            update_positions(particleNode, dt);
+
+            particleNode = nextNode;
+        }
+        currentSpacePartition = currentSpacePartition->next;
+    }
+
+    currentSpacePartition = getSpacePartitionList();
+    while (currentSpacePartition != NULL) {
+        Node* particleNode = currentSpacePartition->item;
+        while(particleNode != NULL) {
+            Node* nextNode = particleNode->next;
+
+            move_particle(particleNode, dt);
+            check_limits((Particle*) particleNode->item, dt);
 
             particleNode = nextNode;
         }

@@ -8,6 +8,7 @@ void createSpacePartitions(int num_of_partitions);
 Node* createParticleList(int num_of_particles);
 Node* getSpacePartitionList();
 void cleanupParticlesAndPartitions();
+Node** getNeighborPartitions(Node* partitionNode);
 
 
 #endif // ADDITIONAL_H
