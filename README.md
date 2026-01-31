@@ -80,7 +80,6 @@ Or use the precompiled binary:
 - Collision detection only checks within each space partition, missing cross-partition collisions
 - Static arrays in math functions (pointing_vector, normalized_vector) are not thread-safe
 - translate_position() uses static array - may cause issues if called multiple times
-- physics.c:98 - `if (current != otherParticleNode)` is always true (otherParticleNode is `current->next`)
 
 ### Features to Implement
 - Viscosity

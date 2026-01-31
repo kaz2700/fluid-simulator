@@ -97,8 +97,7 @@ void update_acceleration(Node* current, float dt) {
 
     Node* otherParticleNode = current->next;
     while(otherParticleNode != NULL) {
-        if (current != otherParticleNode)
-            check_collision(particle, (Particle*) otherParticleNode->item, dt);
+        check_collision(particle, (Particle*) otherParticleNode->item, dt);
         otherParticleNode = otherParticleNode->next;
     } 
 }
