@@ -1,5 +1,7 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "physics.h"
 #include <unistd.h>
 #include "artist.h"
@@ -13,6 +15,7 @@ int main( int argc, char* args[] ) {
 		printf( "Failed to initialize!\n" );
         return 0;
 	}
+    srand(time(NULL));
     createSpacePartitions(16); //this first
     createParticleList(500);
 
@@ -32,6 +35,7 @@ int main( int argc, char* args[] ) {
         usleep(1000000 * dt); //microseconds
     }
 
+	cleanupParticlesAndPartitions();
 	close_sdl();
 
 	return 0;

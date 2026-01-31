@@ -62,7 +62,7 @@ Or use the precompiled binary:
 - Custom linked list implementation using `Node` structures
 - Functions: addToList, removeFromList, unlinkFromList, getFromList, getListLength
 
-**Math Functions** (`math_functions.h`, `math_funcitons.c`)
+**Math Functions** (`math_functions.h`, `math_functions.c`)
 - Distance calculations
 - Vector operations (normalization, pointing vectors)
 - Radial velocity computation
@@ -77,21 +77,14 @@ Or use the precompiled binary:
 ## TODO
 
 ### Bugs
-- Makefile missing source files: artist.c, physics.c, arraylist.c, space_partition.c, math_funcitons.c
-- physics.c:98 - `if (current != otherParticleNode)` is always true (otherParticleNode is `current->next`)
 - Collision detection only checks within each space partition, missing cross-partition collisions
-- No error checking for malloc in createSpacePartitions() and createParticleList()
-- random() may not be initialized (missing srand())
 - Static arrays in math functions (pointing_vector, normalized_vector) are not thread-safe
 - translate_position() uses static array - may cause issues if called multiple times
-- check_limits() flips velocity even if particle is already moving away from wall
-- No cleanup of allocated memory on program exit
-- space_partition.c:20 - integer division may cause off-by-one errors
+- physics.c:98 - `if (current != otherParticleNode)` is always true (otherParticleNode is `current->next`)
 
 ### Features to Implement
 - Viscosity
 - Change coordinate system so origin (0,0) is at bottom left
-- Fix particle trapping on bottom: only flip velocity if it's going down
 - Memory management for particle removal
 - Use proper vectors/arrays for position storage
 - 3D support
@@ -99,7 +92,4 @@ Or use the precompiled binary:
 ### Improvements
 - Make usleep() portable
 - Check neighboring partitions for collisions
-- Add proper error handling
-- Initialize random number generator
 - Make math functions thread-safe
-- Add boundary condition checks in check_limits()

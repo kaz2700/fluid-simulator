@@ -51,7 +51,11 @@ renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERE
 }
 
 void close_sdl() {
+	SDL_DestroyTexture(particleTexture);
+	SDL_DestroyTexture(haloTexture);
+	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow( window );
+	renderer = NULL;
 	window = NULL;
 
 	SDL_Quit();

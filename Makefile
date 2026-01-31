@@ -1,8 +1,8 @@
 # Variables
 CC = gcc
 CFLAGS = $(shell sdl2-config --cflags)   # Includes SDL2 compilation flags
-LIBS = $(shell sdl2-config --libs)       # Includes SDL2 linking flags
-SRC = main.c particle.c            # List all source files here
+LIBS = -lm $(shell sdl2-config --libs)       # Includes math library and SDL2 linking flags
+SRC = main.c particle.c artist.c physics.c arraylist.c space_partition.c math_functions.c
 OBJ = $(SRC:.c=.o)                       # Create a list of object files
 TARGET = program                          # Output target executable
 

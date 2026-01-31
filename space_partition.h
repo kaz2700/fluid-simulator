@@ -7,6 +7,7 @@ Node* getSpacePartitionFromParticleNode(Node* particleNode);
 void createSpacePartitions(int num_of_partitions);
 Node* createParticleList(int num_of_particles);
 Node* getSpacePartitionList();
+void cleanupParticlesAndPartitions();
 
 
 #endif // ADDITIONAL_H

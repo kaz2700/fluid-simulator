@@ -18,8 +18,15 @@ Node* getSpacePartitionFromParticleNode(Node* particleNode) {
         int partitionId = 0;
 
         float gridLength = box_length / partitionGridLength;
-        partitionId = partitionId + x / gridLength;
-        partitionId = partitionId + (int) (y / gridLength) * partitionGridLength;
+        partitionId = partitionId + (int)(x / gridLength);
+        partitionId = partitionId + (int)(y / gridLength) * partitionGridLength;
+        
+        if (partitionId >= spacePartitions) {
+            partitionId = spacePartitions - 1;
+        }
+        if (partitionId < 0) {
+            partitionId = 0;
+        }
 
         Node* spacePartition = getSpacePartitionList();
         int i = 0;
@@ -41,6 +48,10 @@ void createSpacePartitions(int num_of_partitions) {
 
     for (int i = 0; i < num_of_partitions; i++) {
         Node* newNode = malloc(sizeof(Node));
+        if (newNode == NULL) {
+            printf("error: malloc failed for space partition\n");
+            exit(1);
+        }
         newNode->item = NULL;
         newNode->next = NULL;
         addToList(&spacePartitionHeadNode, newNode);
@@ -72,6 +83,10 @@ Node* createParticleList(int num_of_particles) {
 
     for(int i = 0; i < num_of_particles; i++) {
         Particle* particle = malloc(sizeof(Particle));
+        if (particle == NULL) {
+            printf("error: malloc failed for particle\n");
+            exit(1);
+        }
         *particle = original_particle;
 
         int col = i % grid_size;
@@ -85,6 +100,10 @@ Node* createParticleList(int num_of_particles) {
         particle->velocity[1] = (float) random() / RAND_MAX;
 
         Node* particleNode = malloc(sizeof(Node));
+        if (particleNode == NULL) {
+            printf("error: malloc failed for particleNode\n");
+            exit(1);
+        }
         particleNode->item = particle;
 
         Node* spacePartitionNode = getSpacePartitionFromParticleNode(particleNode);
@@ -97,4 +116,29 @@ Node* createParticleList(int num_of_particles) {
 
 Node* getSpacePartitionList() {
     return spacePartitionHeadNode;
+}
+
+void cleanupParticlesAndPartitions() {
+    Node* spacePartitionNode = spacePartitionHeadNode;
+    while (spacePartitionNode != NULL) {
+        Node* particleNode = spacePartitionNode->item;
+        while (particleNode != NULL) {
+            Node* nextParticleNode = particleNode->next;
+            free(particleNode->item);
+            free(particleNode);
+            particleNode = nextParticleNode;
+        }
+        spacePartitionNode->item = NULL;
+        spacePartitionNode = spacePartitionNode->next;
+    }
+    
+    spacePartitionNode = spacePartitionHeadNode;
+    while (spacePartitionNode != NULL) {
+        Node* nextSpacePartitionNode = spacePartitionNode->next;
+        free(spacePartitionNode);
+        spacePartitionNode = nextSpacePartitionNode;
+    }
+    
+    spacePartitionHeadNode = NULL;
+    spacePartitions = 0;
 }

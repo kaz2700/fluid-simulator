@@ -30,13 +30,15 @@ void update_positions(Node* particleNode, float dt) {
 }
 
 void check_limits(Particle* particle, float dt) {
-    if (particle->position[1] + particle->radius + particle->velocity[1] * dt >= box_length ||
-        particle->position[1] - particle->radius + particle->velocity[1] * dt  <= 0)
-            particle->velocity[1] = -1 * collision_energy_transmission_walls * particle->velocity[1];
+    if (particle->position[1] + particle->radius + particle->velocity[1] * dt >= box_length && particle->velocity[1] > 0)
+        particle->velocity[1] = -1 * collision_energy_transmission_walls * particle->velocity[1];
+    if (particle->position[1] - particle->radius + particle->velocity[1] * dt <= 0 && particle->velocity[1] < 0)
+        particle->velocity[1] = -1 * collision_energy_transmission_walls * particle->velocity[1];
 
-    if (particle->position[0] + particle->radius + particle->velocity[0] * dt  >= box_length ||
-        particle->position[0] - particle->radius + particle->velocity[0] * dt  <= 0)
-            particle->velocity[0] = -1 * collision_energy_transmission_walls * particle->velocity[0];
+    if (particle->position[0] + particle->radius + particle->velocity[0] * dt >= box_length && particle->velocity[0] > 0)
+        particle->velocity[0] = -1 * collision_energy_transmission_walls * particle->velocity[0];
+    if (particle->position[0] - particle->radius + particle->velocity[0] * dt <= 0 && particle->velocity[0] < 0)
+        particle->velocity[0] = -1 * collision_energy_transmission_walls * particle->velocity[0];
 }
 
 void check_collision(Particle* particle1, Particle* particle2, float dt) {
