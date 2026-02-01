@@ -79,6 +79,7 @@ Or use the precompiled binary:
 ### Critical Bugs
 - [ ] **Partition recomputation bug**: `integrator.c` computes partition twice (always equal). Should compute once before position update, store it, then compare after.
 - [ ] **Static array in `get_adjacent_partitions()`**: Returns pointer to static local array - thread-unsafe and risks data corruption. Should return by value or use arena allocation.
+- [ ] **Neighbor search incomplete**: Only checks 4 neighbors (forward direction), missing half the adjacent partitions.
 - [x] **Inefficient grid lookup**: `compute_partition_for_particle()` iterates linked list - O(n) instead of O(1) array access.
 
 ### Configuration & Architecture

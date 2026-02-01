@@ -139,9 +139,10 @@ while (!quit) {
 
 ## Known Bugs & Limitations
 
-1. **Thread-safety** - Static arrays in `getNeighborPartitions()` (src/space_partition.c:59)
-2. **Coordinate origin** - Top-left instead of bottom-left (physics convention)
-3. **Memory leaks** - No particle removal mechanism during simulation
+1. **Cross-partition collisions** - Only checks collisions within same partition and 8 neighbors (diagonals only in one direction)
+2. **Thread-safety** - Static arrays in `getNeighborPartitions()` (src/space_partition.c:59)
+3. **Coordinate origin** - Top-left instead of bottom-left (physics convention)
+4. **Memory leaks** - No particle removal mechanism during simulation
 
 ## Code Patterns
 
