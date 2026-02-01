@@ -1,22 +1,57 @@
-# Variables
 CC = gcc
-CFLAGS = $(shell sdl2-config --cflags)   # Includes SDL2 compilation flags
-LIBS = -lm $(shell sdl2-config --libs)       # Includes math library and SDL2 linking flags
-SRC = main.c particle.c artist.c physics.c arraylist.c space_partition.c math_functions.c
-OBJ = $(SRC:.c=.o)                       # Create a list of object files
-TARGET = program                          # Output target executable
+CFLAGS = -Wall -Wextra -std=c99 $(shell sdl2-config --cflags) -Iinclude
+LIBS = -lm $(shell sdl2-config --libs)
 
-# Default rule to build the program
+SRC_DIR = src
+BUILD_DIR = build
+TARGET = $(BUILD_DIR)/program
+
+# Source files in new directory structure
+SRCS = $(SRC_DIR)/main.c \
+       $(SRC_DIR)/core/linked_list.c \
+       $(SRC_DIR)/core/math_utils.c \
+       $(SRC_DIR)/physics/collision.c \
+       $(SRC_DIR)/physics/forces.c \
+       $(SRC_DIR)/physics/integrator.c \
+       $(SRC_DIR)/spatial/grid.c \
+       $(SRC_DIR)/spatial/particle_factory.c \
+       $(SRC_DIR)/render/renderer.c
+
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+
+.PHONY: all clean run
+
 all: $(TARGET)
 
-# Linking rule to create the executable
-$(TARGET): $(OBJ)
-	$(CC) $(OBJ) $(LIBS) -o $(TARGET)
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) $(LIBS) -o $@
 
-# Compiling rule to convert .c files to .o files
-$(OBJ): %.o: %.c
+# Pattern rules for different directory depths
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean rule to remove compiled files
+$(BUILD_DIR)/core/%.o: $(SRC_DIR)/core/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/physics/%.o: $(SRC_DIR)/physics/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/spatial/%.o: $(SRC_DIR)/spatial/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/render/%.o: $(SRC_DIR)/render/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)/core $(BUILD_DIR)/physics $(BUILD_DIR)/spatial $(BUILD_DIR)/render
+
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf $(BUILD_DIR)
+
+run: $(TARGET)
+	./$(TARGET)

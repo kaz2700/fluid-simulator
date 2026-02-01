@@ -76,19 +76,59 @@ Or use the precompiled binary:
 
 ## TODO
 
-### Bugs
-- Collision detection only checks within each space partition, missing cross-partition collisions
-- Static arrays in math functions (pointing_vector, normalized_vector) are not thread-safe
-- translate_position() uses static array - may cause issues if called multiple times
+### Critical Bugs
+- [ ] **Partition recomputation bug**: `integrator.c` computes partition twice (always equal). Should compute once before position update, store it, then compare after.
+- [ ] **Static array in `get_adjacent_partitions()`**: Returns pointer to static local array - thread-unsafe and risks data corruption. Should return by value or use arena allocation.
+- [ ] **Inefficient grid lookup**: `compute_partition_for_particle()` iterates linked list - O(n) instead of O(1) array access.
+
+### Configuration & Architecture
+- [ ] Centralize magic numbers (256 partitions, 0.005f radius, 10.0f gravity) in a `SimulationConfig` struct
+- [ ] Encapsulate global state: `particle_restitution`, `wall_restitution`, `gravity_acceleration`, `domain_size` should be fields in a `PhysicsWorld` struct
+- [ ] Create opaque handles for renderer (`Renderer*`) instead of exposing SDL globals
+- [ ] Add simulation state object to hold `time_step`, `should_quit`, main loop state
+- [ ] Fix tight coupling: Physics should not directly call renderer for wall bounds check
+
+### API Design Improvements
+- [ ] Clarify `apply_gravity()` contract - it zeroes acceleration then sets gravity. Should be `reset_acceleration()` then `apply_gravity()`.
+- [ ] Add getter/setter functions for renderer instead of exposing `window`, `renderer`, `domain_size` as extern globals
+- [ ] Fix const correctness: Mark read-only parameters as `const`
+
+### Type Safety & Code Quality
+- [ ] Replace void pointers in linked list with intrusive lists (embed Node in Particle) or macro-based generics
+- [ ] Add unit tests for math functions, collision logic, grid indexing
+- [ ] Remove dead code: `list_get_at()` never used, `charge` field in Particle unused
+- [ ] Standardize naming: Some functions use `p`, others use `particle`
+- [ ] Add documentation explaining coordinate systems, physics conventions, and algorithm choices
+- [ ] Update AGENTS.md to reflect new file organization
+
+### Memory Management
+- [ ] Implement pool/arena allocator for particles and nodes (avoid 10,000 individual malloc/free calls)
+- [ ] Fix cleanup on init failure: If `init_renderer()` fails after creating window, SDL isn't cleaned up properly
+- [ ] Add proper error handling and resource cleanup paths
+
+### Performance Optimizations
+- [ ] Unify velocity/position passes: Two full loops over particles could be one for cache efficiency
+- [ ] Switch from `SDL_RENDERER_SOFTWARE` to hardware acceleration
+- [ ] Consider vertex-buffer based rendering instead of texture blitting for modern GPUs
+- [ ] Evaluate double precision: Float precision may cause issues with 10k particles at 600px scale
+- [ ] Pre-allocate grid array instead of linked list for O(1) partition access
 
 ### Features to Implement
-- Viscosity
-- Change coordinate system so origin (0,0) is at bottom left
-- Memory management for particle removal
-- Use proper vectors/arrays for position storage
-- 3D support
+- [ ] Viscosity for fluid-like behavior
+- [ ] Memory management for particle removal (currently no deletion mechanism)
+- [ ] 3D support
+- [ ] Change coordinate system so origin (0,0) is at bottom left (physics convention)
+- [ ] Use proper vector math libraries or SIMD for batch operations
 
-### Improvements
-- Make usleep() portable
-- Check neighboring partitions for collisions
-- Make math functions thread-safe
+### Portability
+- [ ] Make `usleep()` portable (Windows doesn't support it)
+- [ ] Add cross-platform build support (CMake or similar)
+- [ ] Add CI/CD for automated testing on different platforms
+
+### Testing & Documentation
+- [ ] Add unit tests for math utilities (`vector_norm`, `distance_on_motion`)
+- [ ] Add integration tests for collision detection
+- [ ] Add benchmarks for spatial partitioning performance
+- [ ] Write developer documentation for the physics model and algorithms
+- [ ] Add inline comments explaining the collision response formula
+- [ ] Document the semi-implicit Euler integration method and why it was chosen
