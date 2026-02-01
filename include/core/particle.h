@@ -1,5 +1,5 @@
-#ifndef particle_header
-#define particle_header
+#ifndef PARTICLE_H
+#define PARTICLE_H
 
 typedef struct Particle {
     float position[2];
@@ -10,4 +10,4 @@ typedef struct Particle {
     float charge;
 } Particle;
 
-#endif // ADDITIONAL_H
+#endif
