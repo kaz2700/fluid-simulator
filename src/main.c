@@ -9,6 +9,7 @@
 #include "spatial/grid.h"
 #include "spatial/particle_factory.h"
 #include "core/linked_list.h"
+#include "core/profiler.h"
 
 static const float time_step = 0.01f;
 
@@ -25,6 +26,9 @@ int main(void) {
     int partition_count = list_count(get_all_partitions());
     printf("SpacePartitionListLength: %d\n", partition_count);
 
+    Profiler profiler;
+    profiler_init(&profiler);
+
     int should_quit = 0;
     SDL_Event event;
 
@@ -33,8 +37,18 @@ int main(void) {
             if (event.type == SDL_QUIT)
                 should_quit = 1;
 
+        profiler_start_frame(&profiler);
+
+        profiler_start_physics(&profiler);
         physics_step(time_step);
-        render_frame();
+        profiler_end_physics(&profiler);
+
+        profiler_start_render(&profiler);
+        render_frame_with_profiler(&profiler, 10000);
+        profiler_end_render(&profiler);
+
+        profiler_end_frame(&profiler);
+
         usleep((useconds_t)(1000000 * time_step));
     }
 

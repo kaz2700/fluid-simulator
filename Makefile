@@ -10,6 +10,7 @@ TARGET = $(BUILD_DIR)/program
 SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/core/linked_list.c \
        $(SRC_DIR)/core/math_utils.c \
+       $(SRC_DIR)/core/profiler.c \
        $(SRC_DIR)/physics/collision.c \
        $(SRC_DIR)/physics/forces.c \
        $(SRC_DIR)/physics/integrator.c \

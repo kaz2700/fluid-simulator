@@ -3,6 +3,7 @@
 #include "spatial/grid.h"
 #include "core/math_utils.h"
 #include "core/linked_list.h"
+#include "core/profiler.h"
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -121,4 +122,24 @@ static void draw_particle(Particle* p) {
 
     SDL_SetTextureColorMod(particle_texture, r, g, b);
     SDL_RenderCopy(renderer, particle_texture, NULL, &dst);
+}
+
+void render_frame_with_profiler(Profiler* prof, int particle_count) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    Node* current_partition = get_all_partitions();
+    while (current_partition != NULL) {
+        Node* current = current_partition->item;
+        while (current != NULL) {
+            draw_particle((Particle*)current->item);
+            current = current->next;
+        }
+        current_partition = current_partition->next;
+    }
+
+    // Draw profiler metrics overlay
+    profiler_draw_metrics(renderer, prof, particle_count);
+
+    SDL_RenderPresent(renderer);
 }
