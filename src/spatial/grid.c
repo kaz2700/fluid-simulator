@@ -6,6 +6,7 @@
 #include <math.h>
 
 static Node* partition_list = NULL;
+static Node** partition_array = NULL;  // O(1) lookup array
 static int num_partitions = 0;
 
 Node* compute_partition_for_particle(Node* particle_node) {
@@ -20,11 +21,7 @@ Node* compute_partition_for_particle(Node* particle_node) {
     if (partition_id < 0)
         partition_id = 0;
 
-    Node* partition = get_all_partitions();
-    for (int i = 0; i < partition_id && partition != NULL; i++)
-        partition = partition->next;
-
-    return partition;
+    return partition_array[partition_id];  // O(1) array access
 }
 
 void move_particle_to_partition(Node* particle_node, Node* old_partition, Node* new_partition) {
@@ -35,6 +32,13 @@ void move_particle_to_partition(Node* particle_node, Node* old_partition, Node* 
 void init_grid(int num_parts) {
     num_partitions = num_parts;
 
+    // Allocate O(1) lookup array
+    partition_array = malloc(num_parts * sizeof(Node*));
+    if (partition_array == NULL) {
+        fprintf(stderr, "error: malloc failed for partition array\n");
+        exit(1);
+    }
+
     for (int i = 0; i < num_parts; i++) {
         Node* new_node = malloc(sizeof(Node));
         if (new_node == NULL) {
@@ -44,6 +48,7 @@ void init_grid(int num_parts) {
         new_node->item = NULL;
         new_node->next = NULL;
         list_append(&partition_list, new_node);
+        partition_array[i] = new_node;  // Store in array for O(1) access
     }
 }
 
@@ -51,11 +56,18 @@ Node** get_adjacent_partitions(Node* partition_node) {
     static Node* neighbors[8];
     int count = 0;
 
-    Node* current = get_all_partitions();
-    int partition_id = 0;
-    while (current != partition_node && current != NULL) {
-        current = current->next;
-        partition_id++;
+    // Find partition_id using array (O(n) but only once, not per neighbor)
+    int partition_id = -1;
+    for (int i = 0; i < num_partitions; i++) {
+        if (partition_array[i] == partition_node) {
+            partition_id = i;
+            break;
+        }
+    }
+    if (partition_id == -1) {
+        while (count < 8)
+            neighbors[count++] = NULL;
+        return neighbors;
     }
 
     int grid_dim = (int)sqrt(num_partitions);
@@ -72,11 +84,7 @@ Node** get_adjacent_partitions(Node* partition_node) {
 
             if (nx >= 0 && nx < grid_dim && ny >= 0 && ny < grid_dim) {
                 int neighbor_id = nx + ny * grid_dim;
-                Node* neighbor = get_all_partitions();
-                for (int i = 0; i < neighbor_id && neighbor != NULL; i++)
-                    neighbor = neighbor->next;
-                if (neighbor != NULL)
-                    neighbors[count++] = neighbor;
+                neighbors[count++] = partition_array[neighbor_id];  // O(1) array access
             }
         }
     }
@@ -117,5 +125,8 @@ void cleanup_grid(void) {
     }
 
     partition_list = NULL;
+    
+    free(partition_array);
+    partition_array = NULL;
     num_partitions = 0;
 }
