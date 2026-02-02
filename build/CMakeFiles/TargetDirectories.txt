@@ -1,3 +1,0 @@
-/home/comoving/fluid-simulator/sph2/build/CMakeFiles/sph2_sim.dir
-/home/comoving/fluid-simulator/sph2/build/CMakeFiles/edit_cache.dir
-/home/comoving/fluid-simulator/sph2/build/CMakeFiles/rebuild_cache.dir

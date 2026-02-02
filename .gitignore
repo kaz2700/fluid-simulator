@@ -1,0 +1,9 @@
+build/
+.cache/
+.direnv/
+*.o
+*.a
+*.so
+*.d
+*.exe
+*.out
