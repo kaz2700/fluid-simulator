@@ -1,0 +1,1 @@
+/nix/store/dmypp1h4ldn0vfk3fi6yfyf5yxp9yz0k-gcc-wrapper-14.3.0/bin/g++ -Wl,--dependency-file=CMakeFiles/fluid_sph.dir/link.d CMakeFiles/fluid_sph.dir/src/core/simulation.cpp.o CMakeFiles/fluid_sph.dir/src/main.cpp.o -o fluid_sph  -lSDL2 -lGL

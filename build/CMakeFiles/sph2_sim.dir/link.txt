@@ -1,0 +1,1 @@
+/nix/store/dmypp1h4ldn0vfk3fi6yfyf5yxp9yz0k-gcc-wrapper-14.3.0/bin/g++ -Wl,--dependency-file=CMakeFiles/sph2_sim.dir/link.d CMakeFiles/sph2_sim.dir/src/main.cpp.o CMakeFiles/sph2_sim.dir/src/physics.cpp.o -o sph2_sim  -lglfw -lepoxy
