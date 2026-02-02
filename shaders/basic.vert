@@ -11,5 +11,5 @@ out vec3 vColor;
 void main() {
     vec2 position = aPos * uParticleSize + aInstPos;
     gl_Position = uProjection * vec4(position, 0.0, 1.0);
-    vColor = vec3(0.2, 0.4, 0.8);
+    vColor = vec3(0.0, 1.0, 0.0);
 }

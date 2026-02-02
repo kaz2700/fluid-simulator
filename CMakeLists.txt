@@ -23,6 +23,7 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE HEADERS "src/*.hpp")
 
 add_executable(sph2_sim ${SOURCES} ${HEADERS})
+target_include_directories(sph2_sim PRIVATE src)
 
 add_custom_command(TARGET sph2_sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
