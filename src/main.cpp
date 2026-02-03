@@ -168,7 +168,13 @@ int main() {
 
     glfwMakeContextCurrent(window);
 
-    glViewport(0, 0, 800, 600);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+
+    glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int w, int h) {
+        glViewport(0, 0, w, h);
+    });
 
     Particles particles;
     particles.spawnGrid(100, 100, 0.025f, -0.5f, -0.5f);
@@ -211,7 +217,7 @@ int main() {
         neighborSearchTime = std::chrono::duration<double, std::milli>(neighborEnd - neighborStart).count();
 
         physics.velocityVerletStep1(particles);
-        physics.handleBoundaries(particles, -0.95f, 0.95f, -0.95f, 0.95f);
+        physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
         physics.velocityVerletStep2(particles);
 
         renderer.render(particles, projection);
