@@ -12,6 +12,7 @@
 #include "particles.hpp"
 #include "physics.hpp"
 #include "spatial.hpp"
+#include "performance_monitor.hpp"
 
 struct Renderer {
     GLuint shaderProgram;
@@ -111,7 +112,6 @@ private:
     char* loadShader(const char* path) {
         std::ifstream file(path);
         if (!file.is_open()) {
-            std::cerr << "Failed to open shader file: " << path << std::endl;
             return nullptr;
         }
         std::stringstream buffer;
@@ -128,7 +128,6 @@ private:
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success) {
             glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-            std::cerr << "ERROR::SHADER::" << type << "::COMPILATION_FAILED\n" << infoLog << std::endl;
         }
     }
 
@@ -138,18 +137,14 @@ private:
         glGetProgramiv(program, GL_LINK_STATUS, &success);
         if (!success) {
             glGetProgramInfoLog(program, 512, nullptr, infoLog);
-            std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         }
     }
 };
 
 int main() {
-    glfwSetErrorCallback([](int error, const char* description) {
-        std::cerr << "GLFW Error (" << error << "): " << description << std::endl;
-    });
+    glfwSetErrorCallback([](int error, const char* description) {});
 
     if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
 
@@ -158,10 +153,8 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    std::cout << "Creating window..." << std::endl;
     GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator", nullptr, nullptr);
         if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
@@ -194,27 +187,18 @@ int main() {
     std::vector<size_t> neighbors;
 
     Renderer renderer;
+    PerformanceMonitor perfMonitor;
 
     glm::mat4 projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
-
-    double lastTime = glfwGetTime();
-    double frameCount = 0;
-    double simTime = 0.0;
-    double neighborSearchTime = 0.0;
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        auto neighborStart = std::chrono::high_resolution_clock::now();
         spatialHash.update(particles.positions);
-        size_t totalNeighbors = 0;
         for (size_t i = 0; i < particles.size(); ++i) {
             spatialHash.getNeighbors(i, particles.positions, neighbors);
-            totalNeighbors += neighbors.size();
         }
-        auto neighborEnd = std::chrono::high_resolution_clock::now();
-        neighborSearchTime = std::chrono::duration<double, std::milli>(neighborEnd - neighborStart).count();
 
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
@@ -222,19 +206,13 @@ int main() {
 
         renderer.render(particles, projection);
 
+        perfMonitor.update();
+        glfwGetFramebufferSize(window, &width, &height);
+        glm::mat4 textProjection = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);
+        perfMonitor.render(textProjection, width, height);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
-
-        frameCount++;
-        simTime += 0.016f;
-        double currentTime = glfwGetTime();
-        if (currentTime - lastTime >= 1.0) {
-            std::cout << "FPS: " << frameCount << " | Sim Time: " << simTime << "s | Particles: " << particles.size() 
-                      << " | Avg Neighbors: " << (totalNeighbors / (particles.size() ? particles.size() : 1))
-                      << " | Neighbor Search: " << neighborSearchTime << "ms" << std::endl;
-            frameCount = 0;
-            lastTime = currentTime;
-        }
     }
 
     glfwTerminate();
