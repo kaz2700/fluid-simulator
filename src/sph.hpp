@@ -35,7 +35,6 @@ private:
     SPHParams params;
     float minDensity;
     float maxDensity;
-    std::vector<size_t> neighbors;
 };
 
 // Convert density to color (blue = low, red = high)

@@ -13,6 +13,10 @@ public:
     
     void getNeighbors(size_t particleIndex, const std::vector<glm::vec2>& positions, std::vector<size_t>& neighbors) const;
     
+    // Fast version using pre-allocated buffer (returns count)
+    size_t getNeighborsFast(size_t particleIndex, const std::vector<glm::vec2>& positions, 
+                            size_t* buffer, size_t bufferSize) const;
+    
     void clear();
 
 private:

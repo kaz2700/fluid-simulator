@@ -6,7 +6,6 @@
 namespace sph {
 
 SPHSolver::SPHSolver(const SPHParams& params) : params(params) {
-    neighbors.reserve(100);
 }
 
 void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) {
@@ -14,21 +13,28 @@ void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) 
     minDensity = std::numeric_limits<float>::max();
     maxDensity = std::numeric_limits<float>::min();
     
+    // Pre-allocate neighbor buffer on stack (avoid repeated heap allocations)
+    size_t neighborBuffer[256];
+    
     for (size_t i = 0; i < n; ++i) {
         float density = 0.0f;
         
-        // Get neighbors using spatial hash
-        grid.getNeighbors(i, particles.positions, neighbors);
+        // Get neighbors - pass pre-allocated buffer
+        size_t neighborCount = grid.getNeighborsFast(i, particles.positions, neighborBuffer, 256);
         
         // Sum contributions from all neighbors
-        for (size_t j : neighbors) {
-            glm::vec2 diff = particles.positions[i] - particles.positions[j];
-            float r = glm::length(diff);
+        const glm::vec2& pi = particles.positions[i];
+        for (size_t k = 0; k < neighborCount; ++k) {
+            const glm::vec2& pj = particles.positions[neighborBuffer[k]];
+            float dx = pi.x - pj.x;
+            float dy = pi.y - pj.y;
+            float r = std::sqrt(dx * dx + dy * dy);
             density += params.m * Kernels::W_poly6(r, params.h);
         }
         
-        // Self-contribution
-        density += params.m * Kernels::W_poly6(0.0f, params.h);
+        // Self-contribution (W_poly6(0, h) = 315/(64*π*h^9) * h^6 = 315/(64*π*h^3))
+        static const float selfContribution = params.m * 315.0f / (64.0f * M_PI * params.h * params.h * params.h);
+        density += selfContribution;
         
         particles.densities[i] = density;
         

@@ -15,6 +15,20 @@
 #include "sph.hpp"
 #include "performance_monitor.hpp"
 
+// Simple timer for profiling
+struct Timer {
+    std::chrono::high_resolution_clock::time_point start;
+    const char* name;
+    Timer(const char* n) : name(n) {
+        start = std::chrono::high_resolution_clock::now();
+    }
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration<float, std::milli>(end - start).count();
+        std::cout << name << ": " << duration << " ms" << std::endl;
+    }
+};
+
 struct Renderer {
     GLuint shaderProgram;
     GLuint VAO, VBO, instancePosVBO, instanceDensityVBO;
@@ -168,9 +182,9 @@ int main() {
         return -1;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
     GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 5: Density", nullptr, nullptr);
@@ -200,7 +214,7 @@ int main() {
     sph::SPHSolver sphSolver(sphParams);
 
     Particles particles;
-    particles.spawnGrid(100, 100, 0.025f, -0.5f, -0.5f);
+    particles.spawnGrid(50, 50, 0.035f, -0.5f, -0.5f);  // Reduced from 100x100 for performance
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -222,23 +236,31 @@ int main() {
 
     bool useDensityColor = true;
 
+    int frameCount = 0;
     while (!glfwWindowShouldClose(window)) {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+        
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Update spatial hash
+        auto t1 = std::chrono::high_resolution_clock::now();
         spatialHash.update(particles.positions);
+        auto t2 = std::chrono::high_resolution_clock::now();
         
         // Compute densities using SPH
         sphSolver.computeDensities(particles, spatialHash);
+        auto t3 = std::chrono::high_resolution_clock::now();
 
         // Physics integration
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
         physics.velocityVerletStep2(particles);
+        auto t4 = std::chrono::high_resolution_clock::now();
 
         // Render with density-based coloring
         renderer.render(particles, projection, rho0, useDensityColor);
+        auto t5 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();
         glfwGetFramebufferSize(window, &width, &height);
@@ -247,6 +269,19 @@ int main() {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        
+        // Print timing every 60 frames
+        if (++frameCount % 60 == 0) {
+            auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
+            auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
+            auto physicsTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
+            auto renderTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
+            auto frameTime = std::chrono::duration<float, std::milli>(t5 - frameStart).count();
+            std::cout << "Frame " << frameCount << " - Grid: " << gridTime 
+                      << "ms, Density: " << densityTime << "ms, Physics: " << physicsTime 
+                      << "ms, Render: " << renderTime << "ms, Total: " << frameTime << "ms (" 
+                      << (1000.0f / frameTime) << " FPS)" << std::endl;
+        }
         
         // Toggle density coloring with 'D' key
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {

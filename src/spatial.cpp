@@ -51,6 +51,37 @@ void SpatialHash::getNeighbors(size_t particleIndex, const std::vector<glm::vec2
     }
 }
 
+size_t SpatialHash::getNeighborsFast(size_t particleIndex, const std::vector<glm::vec2>& positions,
+                                      size_t* buffer, size_t bufferSize) const {
+    size_t count = 0;
+    const glm::vec2& pos = positions[particleIndex];
+    int cx, cy;
+    getCellCoords(pos, cx, cy);
+
+    float searchRadiusSq = cellSize * cellSize;
+
+    for (int dy = -1; dy <= 1 && count < bufferSize; ++dy) {
+        for (int dx = -1; dx <= 1 && count < bufferSize; ++dx) {
+            int cellIdx = cellIndex(cx + dx, cy + dy);
+
+            if (cellIdx >= 0) {
+                const auto& cell = grid[cellIdx];
+                for (size_t neighborIdx : cell) {
+                    if (neighborIdx != particleIndex && count < bufferSize) {
+                        glm::vec2 diff = positions[neighborIdx] - pos;
+                        float distSq = glm::dot(diff, diff);
+
+                        if (distSq < searchRadiusSq) {
+                            buffer[count++] = neighborIdx;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return count;
+}
+
 void SpatialHash::clear() {
     for (auto& cell : grid) {
         cell.clear();
