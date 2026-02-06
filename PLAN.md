@@ -46,8 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 3 Complete - Spatial Partitioning Implemented  
-**Next**: Phase 4 - Kernel Functions (Mathematical Foundation)
+**Phase**: Phase 4 Complete - Kernel Functions Implemented  
+**Next**: Phase 5 - Density Calculation
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
@@ -166,13 +166,13 @@ struct Particles {
 
 ---
 
-## Phase 4: Kernel Functions (Mathematical Foundation)
+## Phase 4: Kernel Functions (Mathematical Foundation) ✅ COMPLETED
 
-### Step 4.1: Create Kernels Module
+### Step 4.1: Create Kernels Module ✅
 - Create `kernels.hpp` and `kernels.cpp` files
 - Define smoothing length `h` as a constant parameter
 
-### Step 4.2: Implement Poly6 Kernel
+### Step 4.2: Implement Poly6 Kernel ✅
 ```cpp
 float W_poly6(float r, float h) {
     if (r > h) return 0.0f;
@@ -184,7 +184,7 @@ float W_poly6(float r, float h) {
 - **Test**: Verify kernel is maximum at r = 0
 - **Test**: Verify kernel integrates to ~1 over its support radius
 
-### Step 4.3: Implement Spiky Kernel Gradient
+### Step 4.3: Implement Spiky Kernel Gradient ✅
 ```cpp
 glm::vec2 gradW_spiky(const glm::vec2& r_vec, float h) {
     float r = glm::length(r_vec);
@@ -196,7 +196,7 @@ glm::vec2 gradW_spiky(const glm::vec2& r_vec, float h) {
 - **Test**: Verify gradient points away from center
 - **Test**: Verify magnitude decreases with distance
 
-### Step 4.4: Implement Viscosity Kernel Laplacian
+### Step 4.4: Implement Viscosity Kernel Laplacian ✅
 ```cpp
 float laplacianW_viscosity(float r, float h) {
     if (r > h) return 0.0f;
@@ -206,10 +206,11 @@ float laplacianW_viscosity(float r, float h) {
 - **Test**: Verify always non-negative
 - **Test**: Verify zero at r = h
 
-### Step 4.5: Unit Tests
+### Step 4.5: Unit Tests ✅
 - Test kernel values at boundary (r = h)
 - Test kernel values at center (r = 0)
 - Verify mathematical properties (symmetry, smoothness)
+- **Results**: 12/12 tests passed
 
 ---
 

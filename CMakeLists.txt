@@ -40,3 +40,8 @@ target_link_libraries(sph2_sim
 set_target_properties(sph2_sim PROPERTIES
   CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -O2"
 )
+
+# Test executable for kernel unit tests
+add_executable(test_kernels tests/test_kernels.cpp src/kernels.cpp)
+target_include_directories(test_kernels PRIVATE src)
+target_link_libraries(test_kernels ${GLM_LIBRARIES})
