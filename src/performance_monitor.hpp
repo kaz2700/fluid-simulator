@@ -15,7 +15,8 @@ public:
     ~PerformanceMonitor();
     
     void update();
-    void render(const glm::mat4& projection, int screenWidth, int screenHeight);
+    void updateTiming(float gridTime, float densityTime, float physicsTime, float renderTime);
+    void render(const glm::mat4& projection, int screenWidth, int screenHeight, size_t particleCount = 0);
     
 private:
     void initGL();
@@ -36,6 +37,11 @@ private:
     double frameTimeMs;
     double lastFrameTime;
     int frameCount;
+    
+    float gridTimeMs;
+    float densityTimeMs;
+    float physicsTimeMs;
+    float renderTimeMs;
     
     GLuint shaderProgram;
     GLuint VAO, VBO;

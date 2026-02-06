@@ -13,13 +13,20 @@ void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) 
     minDensity = std::numeric_limits<float>::max();
     maxDensity = std::numeric_limits<float>::min();
     
-    // Pre-allocate neighbor buffer on stack (avoid repeated heap allocations)
+    // Pre-compute kernel constant: 315/(64*π*h⁹)
+    const float h2 = params.h * params.h;
+    const float h6 = h2 * h2 * h2;
+    const float h9 = h6 * h2 * params.h;
+    const float poly6Coeff = 315.0f / (64.0f * M_PI * h9);
+    const float selfContribution = params.m * poly6Coeff * h2 * h2 * h2; // h^6
+    
+    // Pre-allocate neighbor buffer on stack
     size_t neighborBuffer[256];
     
     for (size_t i = 0; i < n; ++i) {
         float density = 0.0f;
         
-        // Get neighbors - pass pre-allocated buffer
+        // Get neighbors
         size_t neighborCount = grid.getNeighborsFast(i, particles.positions, neighborBuffer, 256);
         
         // Sum contributions from all neighbors
@@ -28,31 +35,32 @@ void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) 
             const glm::vec2& pj = particles.positions[neighborBuffer[k]];
             float dx = pi.x - pj.x;
             float dy = pi.y - pj.y;
-            float r = std::sqrt(dx * dx + dy * dy);
-            density += params.m * Kernels::W_poly6(r, params.h);
+            float r2 = dx * dx + dy * dy;
+            
+            // Poly6 kernel using squared distance (avoids sqrt!)
+            // W(r) = C * (h² - r²)³
+            if (r2 < h2) {
+                float diff = h2 - r2;
+                float diff3 = diff * diff * diff;
+                density += params.m * poly6Coeff * diff3;
+            }
         }
         
-        // Self-contribution (W_poly6(0, h) = 315/(64*π*h^9) * h^6 = 315/(64*π*h^3))
-        static const float selfContribution = params.m * 315.0f / (64.0f * M_PI * params.h * params.h * params.h);
+        // Self-contribution
         density += selfContribution;
         
         particles.densities[i] = density;
-        
-        // Track min/max for visualization
         minDensity = std::min(minDensity, density);
         maxDensity = std::max(maxDensity, density);
     }
 }
 
 glm::vec3 densityToColor(float density, float rho0) {
-    // Normalize density around rest density
-    // Blue = low density, Red = high density
     float t = (density - rho0 * 0.8f) / (rho0 * 0.4f);
     t = std::max(0.0f, std::min(1.0f, t));
     
-    // Interpolate between blue (low) and red (high)
-    glm::vec3 lowColor(0.0f, 0.3f, 1.0f);   // Blue
-    glm::vec3 highColor(1.0f, 0.3f, 0.0f);  // Red
+    glm::vec3 lowColor(0.0f, 0.3f, 1.0f);
+    glm::vec3 highColor(1.0f, 0.3f, 0.0f);
     
     return lowColor * (1.0f - t) + highColor * t;
 }

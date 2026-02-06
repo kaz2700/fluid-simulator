@@ -107,8 +107,9 @@ static const unsigned char fontData[96][5] = {
 
 PerformanceMonitor::PerformanceMonitor() 
     : currentFPS(0.0), averageFPS(0.0), frameTimeMs(0.0), 
-      lastFrameTime(0.0), frameCount(0), shaderProgram(0), 
-      VAO(0), VBO(0), fontTexture(0) {
+      lastFrameTime(0.0), frameCount(0), 
+      gridTimeMs(0.0f), densityTimeMs(0.0f), physicsTimeMs(0.0f), renderTimeMs(0.0f),
+      shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     initGL();
     createFontTexture();
 }
@@ -239,13 +240,23 @@ void PerformanceMonitor::update() {
     currentFPS = frameTimeMs > 0 ? 1000.0 / frameTimeMs : 0.0;
 }
 
-void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, int screenHeight) {
+void PerformanceMonitor::updateTiming(float gridTime, float densityTime, float physicsTime, float renderTime) {
+    gridTimeMs = gridTime;
+    densityTimeMs = densityTime;
+    physicsTimeMs = physicsTime;
+    renderTimeMs = renderTime;
+}
+
+void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, int screenHeight, size_t particleCount) {
     std::stringstream ss;
-    ss << std::fixed << std::setprecision(1);
-    ss << "FPS: " << currentFPS << "\n";
-    ss << "Avg FPS: " << averageFPS << "\n";
-    ss << std::setprecision(2);
-    ss << "Frame: " << frameTimeMs << "ms";
+    ss << std::fixed << std::setprecision(2);
+    ss << "Grid: " << gridTimeMs << "ms\n";
+    ss << "Density: " << densityTimeMs << "ms\n";
+    ss << "Physics: " << physicsTimeMs << "ms\n";
+    ss << "Render: " << renderTimeMs << "ms\n";
+    ss << "Total: " << frameTimeMs << "ms (";
+    ss << std::setprecision(1) << currentFPS << " FPS)\n";
+    ss << "Particles: " << particleCount;
     
     std::string text = ss.str();
     

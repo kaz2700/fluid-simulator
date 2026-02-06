@@ -194,6 +194,7 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(0);  // Disable vsync to see true performance
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -214,7 +215,7 @@ int main() {
     sph::SPHSolver sphSolver(sphParams);
 
     Particles particles;
-    particles.spawnGrid(50, 50, 0.035f, -0.5f, -0.5f);  // 2,500 particles for 60 FPS
+    particles.spawnGrid(71, 71, 0.03f, -0.5f, -0.5f);  // ~5,000 particles (5041)
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -263,25 +264,22 @@ int main() {
         auto t5 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();
+        
+        // Calculate timing data
+        auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
+        auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
+        auto physicsTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
+        auto renderTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
+        perfMonitor.updateTiming(gridTime, densityTime, physicsTime, renderTime);
+        
         glfwGetFramebufferSize(window, &width, &height);
         glm::mat4 textProjection = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);
-        perfMonitor.render(textProjection, width, height);
+        perfMonitor.render(textProjection, width, height, particles.size());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
         
-        // Print timing every 60 frames
-        if (++frameCount % 60 == 0) {
-            auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
-            auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
-            auto physicsTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
-            auto renderTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
-            auto frameTime = std::chrono::duration<float, std::milli>(t5 - frameStart).count();
-            std::cout << "Frame " << frameCount << " - Grid: " << gridTime 
-                      << "ms, Density: " << densityTime << "ms, Physics: " << physicsTime 
-                      << "ms, Render: " << renderTime << "ms, Total: " << frameTime << "ms (" 
-                      << (1000.0f / frameTime) << " FPS)" << std::endl;
-        }
+
         
         // Toggle density coloring with 'D' key
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
