@@ -26,15 +26,10 @@ public:
     // Compute densities using Poly6 kernel
     void computeDensities(Particles& particles, const SpatialHash& grid);
     
-    // Get min/max density for visualization normalization
-    float getMinDensity() const { return minDensity; }
-    float getMaxDensity() const { return maxDensity; }
     float getRestDensity() const { return params.rho0; }
     
 private:
     SPHParams params;
-    float minDensity;
-    float maxDensity;
 };
 
 // Convert density to color (blue = low, red = high)

@@ -1,6 +1,5 @@
 #include "sph.hpp"
 #include "kernels.hpp"
-#include <algorithm>
 #include <cmath>
 
 namespace sph {
@@ -10,8 +9,6 @@ SPHSolver::SPHSolver(const SPHParams& params) : params(params) {
 
 void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) {
     size_t n = particles.size();
-    minDensity = std::numeric_limits<float>::max();
-    maxDensity = std::numeric_limits<float>::min();
     
     // Pre-compute kernel constant: 315/(64*π*h⁹)
     const float h2 = params.h * params.h;
@@ -50,8 +47,6 @@ void SPHSolver::computeDensities(Particles& particles, const SpatialHash& grid) 
         density += selfContribution;
         
         particles.densities[i] = density;
-        minDensity = std::min(minDensity, density);
-        maxDensity = std::max(maxDensity, density);
     }
 }
 

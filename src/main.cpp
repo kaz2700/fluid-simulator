@@ -129,13 +129,17 @@ struct Renderer {
         glUniform1f(glGetUniformLocation(shaderProgram, "uRestDensity"), restDensity);
         glUniform1i(glGetUniformLocation(shaderProgram, "uUseDensityColor"), useDensityColor ? 1 : 0);
 
-        // Update instance position buffer
-        glBindBuffer(GL_ARRAY_BUFFER, instancePosVBO);
-        glBufferData(GL_ARRAY_BUFFER, particles.positions.size() * sizeof(glm::vec2), particles.positions.data(), GL_DYNAMIC_DRAW);
+        size_t posSize = particles.positions.size() * sizeof(glm::vec2);
+        size_t densitySize = particles.densities.size() * sizeof(float);
 
-        // Update instance density buffer
+        // Use glBufferSubData to avoid GPU memory reallocation
+        glBindBuffer(GL_ARRAY_BUFFER, instancePosVBO);
+        glBufferData(GL_ARRAY_BUFFER, posSize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
+        glBufferSubData(GL_ARRAY_BUFFER, 0, posSize, particles.positions.data());
+
         glBindBuffer(GL_ARRAY_BUFFER, instanceDensityVBO);
-        glBufferData(GL_ARRAY_BUFFER, particles.densities.size() * sizeof(float), particles.densities.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, densitySize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
+        glBufferSubData(GL_ARRAY_BUFFER, 0, densitySize, particles.densities.data());
 
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, particles.size());

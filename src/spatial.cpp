@@ -83,7 +83,8 @@ size_t SpatialHash::getNeighborsFast(size_t particleIndex, const std::vector<glm
 }
 
 void SpatialHash::clear() {
+    // Fast clear by swapping with empty vectors (avoids destructing elements)
     for (auto& cell : grid) {
-        cell.clear();
+        std::vector<size_t>().swap(cell);
     }
 }
