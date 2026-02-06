@@ -214,7 +214,7 @@ int main() {
     sph::SPHSolver sphSolver(sphParams);
 
     Particles particles;
-    particles.spawnGrid(50, 50, 0.035f, -0.5f, -0.5f);  // Reduced from 100x100 for performance
+    particles.spawnGrid(50, 50, 0.035f, -0.5f, -0.5f);  // 2,500 particles for 60 FPS
 
     std::random_device rd;
     std::mt19937 gen(rd());
