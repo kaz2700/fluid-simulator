@@ -46,7 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 3 Complete - Spatial Partitioning Implemented
+**Phase**: Phase 3 Complete - Spatial Partitioning Implemented  
+**Next**: Phase 4 - Kernel Functions (Mathematical Foundation)
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
@@ -165,150 +166,435 @@ struct Particles {
 
 ---
 
-## Phase 4: SPH Core Physics
+## Phase 4: Kernel Functions (Mathematical Foundation)
 
-### Step 4.1: Smoothing Kernel Functions
-- Implement Poly6 kernel for density:
-  ```
-  W_poly6(r, h) = 315/(64*π*h⁹) * (h² - r²)³ for r ≤ h
-  ```
-- Implement Spiky kernel gradient for pressure forces:
-  ```
-  ∇W_spiky(r, h) = -45/(π*h⁶) * (h - r)² * (r/|r|) for r ≤ h
-  ```
-- Implement Laplacian kernel for viscosity:
-  ```
-  ∇²W_viscosity(r, h) = 45/(π*h⁶) * (h - r) for r ≤ h
-  ```
+### Step 4.1: Create Kernels Module
+- Create `kernels.hpp` and `kernels.cpp` files
+- Define smoothing length `h` as a constant parameter
 
-### Step 4.2: Density Calculation
-- Compute density for each particle:
-  ```
-  ρᵢ = Σⱼ mⱼ * W_poly6(|rᵢ - rⱼ|, h)
-  ```
-- Store densities in particle array
+### Step 4.2: Implement Poly6 Kernel
+```cpp
+float W_poly6(float r, float h) {
+    if (r > h) return 0.0f;
+    float term = h*h - r*r;
+    return (315.0f / (64.0f * M_PI * pow(h, 9))) * pow(term, 3);
+}
+```
+- **Test**: Verify kernel returns 0 when r > h
+- **Test**: Verify kernel is maximum at r = 0
+- **Test**: Verify kernel integrates to ~1 over its support radius
 
-### Step 4.3: Pressure Calculation
-- Implement Tait equation of state:
-  ```
-  Pᵢ = B * ((ρᵢ/ρ₀)⁷ - 1)
-  ```
-  where B = stiffness constant, ρ₀ = rest density
-- Handle negative pressures (set to zero)
+### Step 4.3: Implement Spiky Kernel Gradient
+```cpp
+glm::vec2 gradW_spiky(const glm::vec2& r_vec, float h) {
+    float r = glm::length(r_vec);
+    if (r > h || r < 1e-6f) return glm::vec2(0.0f);
+    float coeff = -45.0f / (M_PI * pow(h, 6)) * pow(h - r, 2) / r;
+    return coeff * r_vec;
+}
+```
+- **Test**: Verify gradient points away from center
+- **Test**: Verify magnitude decreases with distance
 
-### Step 4.4: Pressure Force Computation
-- Compute pressure force for each particle:
-  ```
-  F_pressure,i = -Σⱼ mⱼ * (Pᵢ + Pⱼ)/(2*ρⱼ) * ∇W_spiky(|rᵢ - rⱼ|, h)
-  ```
-- Add to particle accelerations
+### Step 4.4: Implement Viscosity Kernel Laplacian
+```cpp
+float laplacianW_viscosity(float r, float h) {
+    if (r > h) return 0.0f;
+    return 45.0f / (M_PI * pow(h, 6)) * (h - r);
+}
+```
+- **Test**: Verify always non-negative
+- **Test**: Verify zero at r = h
 
-### Step 4.5: Viscosity Force Computation
-- Compute viscosity force:
-  ```
-  F_viscosity,i = μ * Σⱼ mⱼ * (vⱼ - vᵢ)/ρⱼ * ∇²W_viscosity(|rᵢ - rⱼ|, h)
-  ```
-  where μ = viscosity coefficient
-- Add to particle accelerations
-
-### Step 4.6: External Forces
-- Add gravity: F_gravity = m * g
-- Apply to particle accelerations
-
-### Step 4.7: Integrate SPH Physics
-- Combine all forces into velocity update
-- Update positions with Velocity Verlet
-
-### Step 4.8: Basic SPH Simulation Test
-- Create dam break scenario
-- Verify fluid-like behavior
+### Step 4.5: Unit Tests
+- Test kernel values at boundary (r = h)
+- Test kernel values at center (r = 0)
+- Verify mathematical properties (symmetry, smoothness)
 
 ---
 
-## Phase 5: Advanced SPH Features
+## Phase 5: Density Calculation
 
-### Step 5.1: Surface Tension (Optional)
+### Step 5.1: Add Density to Particle Structure
+- Add `std::vector<float> densities` to Particles struct
+- Initialize all densities to rest density (ρ₀)
+
+### Step 5.2: Compute Particle Densities
+```cpp
+void computeDensities(Particles& particles, const SpatialGrid& grid) {
+    for each particle i:
+        ρᵢ = 0
+        for each neighbor j:
+            r = |xᵢ - xⱼ|
+            ρᵢ += m * W_poly6(r, h)
+        // Self-contribution
+        ρᵢ += m * W_poly6(0, h)
+}
+```
+- Use existing spatial grid for neighbor search
+- Include self-contribution term
+
+### Step 5.3: Density Visualization
+- Pass density values to shader as vertex attribute
+- Color particles based on density (blue = low, red = high)
+- **Visual Test**: Particles should show varying colors
+
+### Step 5.4: Validation
+- **Test**: Uniform grid of particles should have roughly uniform density
+- **Test**: Particles at edges may have lower density (expected)
+- **Test**: Verify density values are reasonable (not zero, not NaN)
+
+---
+
+## Phase 6: Pressure Calculation
+
+### Step 6.1: Add Pressure to Particle Structure
+- Add `std::vector<float> pressures` to Particles struct
+
+### Step 6.2: Implement Tait Equation of State
+```cpp
+void computePressures(Particles& particles) {
+    const float B = 100.0f;        // Stiffness (tune this)
+    const float rho0 = 1000.0f;    // Rest density (kg/m³)
+    const float gamma = 7.0f;      // Exponent
+    
+    for each particle i:
+        float ratio = particles.densities[i] / rho0;
+        particles.pressures[i] = B * (pow(ratio, gamma) - 1.0f);
+        // Clamp negative pressures to zero
+        if (particles.pressures[i] < 0.0f) 
+            particles.pressures[i] = 0.0f;
+}
+```
+
+### Step 6.3: Visualize Pressure
+- Color particles based on pressure (green = low, yellow = high)
+- **Visual Test**: Higher density areas should show higher pressure
+
+### Step 6.4: Parameter Tuning
+- Start with B = 100.0f (low stiffness, more compressible)
+- Test with B = 1000.0f (higher stiffness, less compressible)
+- Verify pressure values are positive and finite
+
+---
+
+## Phase 7: Pressure Forces
+
+### Step 7.1: Add Pressure Acceleration Calculation
+```cpp
+void computePressureForces(Particles& particles, const SpatialGrid& grid) {
+    for each particle i:
+        glm::vec2 f_pressure(0.0f);
+        for each neighbor j:
+            if (i == j) continue;
+            glm::vec2 r_vec = particles.positions[i] - particles.positions[j];
+            float r = glm::length(r_vec);
+            if (r < h) {
+                glm::vec2 gradW = gradW_spiky(r_vec, h);
+                float pressure_term = (particles.pressures[i] + particles.pressures[j]) 
+                                      / (2.0f * particles.densities[j]);
+                f_pressure -= m * pressure_term * gradW;
+            }
+        }
+        particles.accelerations[i] = f_pressure / particles.densities[i];
+}
+```
+
+### Step 7.2: Integrate with Velocity Verlet
+- Use pressure forces in the integration step
+- Keep boundary handling from Phase 2
+
+### Step 7.3: First Fluid Motion Test
+- Initialize particles in a square block
+- Run simulation with pressure forces only
+- **Visual Test**: Particles should repel each other and expand
+- **Visual Test**: Fluid should push away from high-pressure regions
+
+### Step 7.4: Debug and Validate
+- Check for NaN or infinite values
+- Verify particles don't explode (too much force)
+- Tune B parameter if needed (reduce if unstable)
+
+---
+
+## Phase 8: Viscosity and External Forces
+
+### Step 8.1: Add Viscosity Forces
+```cpp
+void computeViscosityForces(Particles& particles, const SpatialGrid& grid) {
+    const float mu = 0.1f;  // Viscosity coefficient (tune this)
+    
+    for each particle i:
+        glm::vec2 f_viscosity(0.0f);
+        for each neighbor j:
+            if (i == j) continue;
+            float r = distance(particles.positions[i], particles.positions[j]);
+            if (r < h) {
+                float laplacian = laplacianW_viscosity(r, h);
+                glm::vec2 velocity_diff = particles.velocities[j] - particles.velocities[i];
+                f_viscosity += m * velocity_diff / particles.densities[j] * laplacian;
+            }
+        }
+        f_viscosity *= mu;
+        particles.accelerations[i] += f_viscosity / particles.densities[i];
+}
+```
+
+### Step 8.2: Add Gravity
+```cpp
+void applyGravity(Particles& particles) {
+    const glm::vec2 gravity(0.0f, -9.81f);  // m/s² downward
+    for each particle i:
+        particles.accelerations[i] += gravity;
+}
+```
+
+### Step 8.3: Complete Force Integration
+Update the main loop:
+```cpp
+1. Compute densities
+2. Compute pressures
+3. Reset accelerations to zero
+4. Compute pressure forces (adds to accelerations)
+5. Compute viscosity forces (adds to accelerations)
+6. Apply gravity (adds to accelerations)
+7. Velocity Verlet integration
+8. Boundary handling
+```
+
+### Step 8.4: Full SPH Test
+- **Dam Break Test**: Initialize fluid block, remove barrier, verify flow
+- **Visual Test**: Fluid should flow downward due to gravity
+- **Visual Test**: Viscosity should dampen motion (compare with/without)
+- **Visual Test**: Fluid should be incompressible-ish (maintain volume)
+
+---
+
+## Phase 9: Stability and Tuning
+
+### Step 9.1: Adaptive Time Stepping
+```cpp
+float computeAdaptiveTimestep(const Particles& particles) {
+    const float CFL = 0.4f;  // Courant-Friedrichs-Lewy number
+    float max_velocity = 0.0f;
+    for each particle i:
+        max_velocity = max(max_velocity, glm::length(particles.velocities[i]));
+    if (max_velocity < 1e-6f) return MAX_DT;
+    float dt = CFL * h / max_velocity;
+    return glm::clamp(dt, MIN_DT, MAX_DT);  // e.g., 0.0001f to 0.01f
+}
+```
+- Prevents instability when velocities get high
+- Essential for maintaining simulation stability
+
+### Step 9.2: Parameter Space Exploration
+Create a parameter file for easy tuning:
+```cpp
+struct SPHParams {
+    float h = 0.1f;           // Smoothing length
+    float m = 0.02f;          // Particle mass
+    float rho0 = 1000.0f;     // Rest density
+    float B = 200.0f;         // Stiffness
+    float mu = 0.1f;          // Viscosity
+    float damping = 0.8f;     // Boundary damping
+};
+```
+- Test different values systematically
+- Document good parameter combinations
+
+### Step 9.3: Numerical Stability Checks
+- Add assertions for NaN/Inf detection
+- Check for negative densities (shouldn't happen)
+- Verify particles stay within reasonable bounds
+- Add automatic simulation reset if explosion detected
+
+### Step 9.4: Performance Baseline
+- Measure FPS with 1000, 5000, 10000 particles
+- Record timing for each physics step
+- Establish baseline before optimizations
+
+---
+
+## Phase 10: Rendering Enhancements
+
+### Step 10.1: Density-Based Coloring
+```cpp
+// In fragment shader
+vec3 densityToColor(float density) {
+    float t = (density - rho0 * 0.8f) / (rho0 * 0.4f);
+    t = clamp(t, 0.0f, 1.0f);
+    return mix(vec3(0.0, 0.3, 1.0), vec3(1.0, 0.3, 0.0), t);
+}
+```
+- Blue = low density, Red = high density
+- Pass density as vertex attribute
+
+### Step 10.2: Velocity-Based Coloring
+```cpp
+vec3 velocityToColor(vec2 velocity) {
+    float speed = length(velocity);
+    float t = clamp(speed / maxSpeed, 0.0f, 1.0f);
+    return mix(vec3(0.0, 0.0, 0.5), vec3(1.0, 1.0, 0.0), t);
+}
+```
+- Toggle between density and velocity coloring with key press
+
+### Step 10.3: Particle Size Based on Pressure
+```cpp
+float size = baseSize * (1.0f + 0.2f * (pressure / B));
+```
+- Higher pressure = larger particles (helps visualize compression)
+
+### Step 10.4: Simple Background Grid
+- Render grid lines behind particles
+- Helps visualize fluid motion and boundaries
+
+---
+
+## Phase 11: User Interaction
+
+### Step 11.1: Mouse Controls
+- Left click + drag: Add particles continuously
+- Right click: Remove particles near cursor
+- Scroll wheel: Adjust zoom level
+
+### Step 11.2: Keyboard Controls
+```cpp
+Keys:
+  R - Reset simulation
+  Space - Pause/Resume
+  1 - Density coloring
+  2 - Velocity coloring
+  3 - Pressure coloring
+  Up/Down - Increase/decrease gravity
+  Left/Right - Increase/decrease viscosity
+```
+
+### Step 11.3: On-Screen Display (OSD)
+- Render text showing:
+  - FPS
+  - Particle count
+  - Current parameters (gravity, viscosity, stiffness)
+  - Simulation time
+- Use simple bitmap font or OpenGL text rendering
+
+### Step 11.4: Scenario Presets
+Create preset initial conditions:
+- Dam break (block of water)
+- Water drop (circular cluster falling)
+- Double dam break (two fluids colliding)
+- Fountain (continuous particle source)
+
+---
+
+## Phase 12: Performance Optimizations (CPU)
+
+### Step 12.1: Code Profiling Infrastructure
+```cpp
+class Timer {
+    std::chrono::high_resolution_clock::time_point start;
+public:
+    void begin() { start = std::chrono::high_resolution_clock::now(); }
+    float elapsed() { 
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration<float, std::milli>(end - start).count();
+    }
+};
+```
+- Time each major step: neighbor search, density, pressure, integration
+- Print timing breakdown each frame
+
+### Step 12.2: Memory Optimization
+- Use `reserve()` for all vectors to prevent reallocations
+- Consider using `std::vector` pools for temporary arrays
+- Profile memory usage
+
+### Step 12.3: Cache-Friendly Access Patterns
+- Ensure spatial grid traversal accesses memory sequentially
+- Minimize pointer chasing in neighbor loops
+- Consider reordering particles by spatial locality (optional)
+
+### Step 12.4: Spatial Grid Optimizations
+- Use bitsets or boolean flags instead of clearing entire grid
+- Consider using z-order curve for better cache locality (advanced)
+- Experiment with different cell sizes (h, 2h, 0.5h)
+
+---
+
+## Phase 13: Multi-threading (Optional Performance Boost)
+
+### Step 13.1: Thread Pool Implementation
+- Create thread pool with hardware concurrency threads
+- Use work-stealing queue or simple task distribution
+
+### Step 13.2: Parallelize Physics Steps
+```cpp
+// Parallel for each particle
+#pragma omp parallel for  // or use thread pool
+for (int i = 0; i < particleCount; ++i) {
+    computeDensityForParticle(i);
+}
+```
+- Density calculation: Embarrassingly parallel
+- Pressure/viscosity: Requires careful synchronization or domain decomposition
+
+### Step 13.3: Thread Safety
+- Use atomic operations for grid updates (if parallelizing grid build)
+- Or partition grid into regions processed by different threads
+- Ensure no race conditions in force calculations
+
+### Step 13.4: Performance Validation
+- Compare single-threaded vs multi-threaded performance
+- Verify correctness (same results as single-threaded)
+- Measure scaling (should see ~2x speedup on 4 cores for density calc)
+
+---
+
+## Phase 14: GPU Compute (Advanced)
+
+### Step 14.1: OpenGL Compute Shader Setup
+- Create compute shader for density calculation
+- Use Shader Storage Buffer Objects (SSBOs) for particle data
+- Understand compute shader work groups
+
+### Step 14.2: GPU Density Calculation
+- Port density kernel to compute shader
+- Use parallel reduction for neighbor search (or spatial hash on GPU)
+- Read results back to CPU or keep on GPU
+
+### Step 14.3: GPU Force Calculation
+- Port pressure and viscosity calculations to compute shader
+- Benchmark CPU vs GPU performance
+- Consider hybrid approach (CPU for small particle counts, GPU for large)
+
+### Step 14.4: Zero-Copy Rendering
+- Use SSBOs directly in vertex shader
+- Eliminate CPU→GPU data transfer each frame
+- Requires keeping all particle data on GPU
+
+---
+
+## Phase 15: Advanced Features (Optional)
+
+### Step 15.1: Surface Tension
 - Implement surface tension using curvature-based approach
 - Or use color field method for droplet formation
+- Helps create realistic droplets and splashes
 
-### Step 5.2: Adaptive Time Stepping
-- Implement CFL condition:
-  ```
-  dt = CFL * h / max(|v|)
-  ```
-- Clamp dt to min/max values
-
-### Step 5.3: Density Relaxation
+### Step 15.2: Density Relaxation / Incompressibility
 - Add density relaxation step for better volume conservation
-- Implement density correction forces
+- Implement Predictive-Corrective Incompressible SPH (PCISPH)
+- Or implement divergence-free SPH (DFSPH) for true incompressibility
 
----
+### Step 15.3: Rigid Body Coupling
+- Add rigid bodies that interact with fluid
+- Compute fluid-solid forces
+- Allow objects to float or sink based on density
 
-## Phase 6: Rendering Enhancements
-
-### Step 6.1: Density-Based Coloring
-- Map density values to color gradient (blue to white)
-- Pass density to fragment shader via vertex attributes
-
-### Step 6.2: Velocity-Based Coloring
-- Alternative visualization: color based on velocity magnitude
-- Add toggle between density and velocity coloring modes
-
-### Step 6.3: Particle Size Variation
-- Adjust particle size based on pressure
-- Low pressure = larger particles (expansion)
-- High pressure = smaller particles (compression)
-
-### Step 6.4: Metaball Shader (Optional)
-- Implement fragment shader for smooth fluid appearance
-- Use marching squares or raymarching approach
-- Blend particles using Gaussian kernel
-
----
-
-## Phase 7: Performance Optimizations
-
-### Step 7.1: GPU Compute Shaders
-- Port density calculation to compute shader
-- Port force calculations to compute shader
-- Use SSBOs for particle data
-
-### Step 7.2: SIMD Vectorization (if CPU-bound)
-- Use AVX2 for vectorized particle calculations
-- Process 4-8 particles simultaneously
-
-### Step 7.3: Multi-threading
-- Implement thread pool for parallel physics
-- Partition grid regions among threads
-- Use atomic operations or lock-free data structures
-
-### Step 7.4: Profiling
-- Add performance counters
-- Identify bottlenecks with timing
-- Optimize hot paths
-
----
-
-## Phase 8: User Controls
-
-### Step 8.1: Interactive Particle Spawning
-- Detect mouse clicks in OpenGL window
-- Spawn particles at mouse position
-- Add continuous spawning while mouse held
-
-### Step 8.2: Parameter Tweaking
-- Add key bindings for adjusting:
-  - Smoothing length (h)
-  - Stiffness (B)
-  - Viscosity (μ)
-  - Gravity (g)
-- Display current parameters on screen
-
-### Step 8.3: Performance Metrics Display
-- Render FPS counter
-- Show particle count
-- Display simulation time
-- Show neighbor count statistics
+### Step 15.4: Multiple Fluid Types
+- Support different fluids with varying properties
+- Handle fluid-fluid interaction (e.g., oil and water)
+- Different colors for different fluid types
 
 ---
 
