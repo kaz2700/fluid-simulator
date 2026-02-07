@@ -234,17 +234,17 @@ int main() {
     sph::SPHSolver sphSolver(sphParams);
 
     Particles particles;
-    particles.spawnGrid(100, 100, 0.02f, -0.5f, -0.5f);  // 10,000 particles
+    particles.spawnGrid(71, 71, 0.02f, -0.5f, -0.5f);  // ~5,000 particles
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> velDist(-0.1f, 0.1f);
 
     for (size_t i = 0; i < particles.size(); ++i) {
-        particles.velocities[i] = glm::vec2(velDist(gen), velDist(gen));
+        particles.velocities[i] = glm::vec2(0.0f, 0.0f);  // Zero initial velocity
     }
 
-    Physics physics(0.016f, -9.81f, 0.8f, B, rho0, gamma);  // Normal gravity
+    Physics physics(0.016f, 0.0f, 0.8f, B, rho0, gamma);  // Temporarily zero gravity
 
     SpatialHash spatialHash(h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
@@ -284,10 +284,11 @@ int main() {
         // Compute pressure forces
         physics.computePressureForces(particles, spatialHash);
         auto t5 = std::chrono::high_resolution_clock::now();
-        
+
         // Apply gravity (adds to existing pressure accelerations)
         physics.applyGravity(particles);
-        
+        auto t6 = std::chrono::high_resolution_clock::now();
+
         // Physics integration
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
@@ -296,18 +297,19 @@ int main() {
 
         // Render with density-based coloring
         renderer.render(particles, projection, rho0, useDensityColor, usePressureColor);
-        auto t6 = std::chrono::high_resolution_clock::now();
+        auto t8 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();
-        
+
         // Calculate timing data
         auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
         auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
         auto pressureTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
         auto pressureForceTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
-        auto physicsTime = std::chrono::duration<float, std::milli>(t6 - t5).count();
-        auto renderTime = std::chrono::duration<float, std::milli>(t7 - t6).count();
-        perfMonitor.updateTiming(gridTime, densityTime, pressureForceTime, renderTime);
+        auto gravityTime = std::chrono::duration<float, std::milli>(t6 - t5).count();
+        auto integrationTime = std::chrono::duration<float, std::milli>(t7 - t6).count();
+        auto renderTime = std::chrono::duration<float, std::milli>(t8 - t7).count();
+        perfMonitor.updateTiming(gridTime, densityTime, pressureTime, pressureForceTime, gravityTime, integrationTime, renderTime);
         
         glfwGetFramebufferSize(window, &width, &height);
         glm::mat4 textProjection = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);

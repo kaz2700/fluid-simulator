@@ -15,7 +15,8 @@ public:
     ~PerformanceMonitor();
     
     void update();
-    void updateTiming(float gridTime, float densityTime, float physicsTime, float renderTime);
+    void updateTiming(float gridTime, float densityTime, float pressureCalcTime, 
+                     float pressureForceTime, float gravityTime, float integrationTime, float renderTime);
     void render(const glm::mat4& projection, int screenWidth, int screenHeight, size_t particleCount = 0);
     
 private:
@@ -40,7 +41,10 @@ private:
     
     float gridTimeMs;
     float densityTimeMs;
-    float physicsTimeMs;
+    float pressureCalcTimeMs;
+    float pressureForceTimeMs;
+    float gravityTimeMs;
+    float integrationTimeMs;
     float renderTimeMs;
     
     GLuint shaderProgram;

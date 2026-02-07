@@ -105,11 +105,12 @@ static const unsigned char fontData[96][5] = {
     {0x08, 0x08, 0x2A, 0x1C, 0x08}, // ->
 };
 
-PerformanceMonitor::PerformanceMonitor() 
-    : currentFPS(0.0), averageFPS(0.0), frameTimeMs(0.0), 
-      lastFrameTime(0.0), frameCount(0), 
-      gridTimeMs(0.0f), densityTimeMs(0.0f), physicsTimeMs(0.0f), renderTimeMs(0.0f),
-      shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
+PerformanceMonitor::PerformanceMonitor()
+    : currentFPS(0.0), averageFPS(0.0), frameTimeMs(0.0),
+      lastFrameTime(0.0), frameCount(0),
+      gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
+      pressureForceTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
+      renderTimeMs(0.0f), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     initGL();
     createFontTexture();
 }
@@ -240,10 +241,14 @@ void PerformanceMonitor::update() {
     currentFPS = frameTimeMs > 0 ? 1000.0 / frameTimeMs : 0.0;
 }
 
-void PerformanceMonitor::updateTiming(float gridTime, float densityTime, float physicsTime, float renderTime) {
+void PerformanceMonitor::updateTiming(float gridTime, float densityTime, float pressureCalcTime,
+                                     float pressureForceTime, float gravityTime, float integrationTime, float renderTime) {
     gridTimeMs = gridTime;
     densityTimeMs = densityTime;
-    physicsTimeMs = physicsTime;
+    pressureCalcTimeMs = pressureCalcTime;
+    pressureForceTimeMs = pressureForceTime;
+    gravityTimeMs = gravityTime;
+    integrationTimeMs = integrationTime;
     renderTimeMs = renderTime;
 }
 
@@ -252,7 +257,10 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     ss << std::fixed << std::setprecision(2);
     ss << "Grid: " << gridTimeMs << "ms\n";
     ss << "Density: " << densityTimeMs << "ms\n";
-    ss << "Physics: " << physicsTimeMs << "ms\n";
+    ss << "Pressure Calc: " << pressureCalcTimeMs << "ms\n";
+    ss << "Pressure Forces: " << pressureForceTimeMs << "ms\n";
+    ss << "Gravity: " << gravityTimeMs << "ms\n";
+    ss << "Integration: " << integrationTimeMs << "ms\n";
     ss << "Render: " << renderTimeMs << "ms\n";
     ss << "Total: " << frameTimeMs << "ms (";
     ss << std::setprecision(1) << currentFPS << " FPS)\n";
