@@ -205,7 +205,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 6: Pressure", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 7: Pressure Forces", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -226,7 +226,7 @@ int main() {
     const float h = 0.08f;           // Smoothing length
     const float m = 0.02f;           // Particle mass
     const float rho0 = 1000.0f;      // Rest density
-    const float B = 500.0f;          // Stiffness (increased for better pressure visualization)
+    const float B = 200.0f;          // Stiffness (increased for more visible pressure effects)
     const float mu = 0.1f;           // Viscosity (not used yet in Phase 6)
     const float gamma = 7.0f;        // Pressure exponent
     
@@ -234,7 +234,7 @@ int main() {
     sph::SPHSolver sphSolver(sphParams);
 
     Particles particles;
-    particles.spawnGrid(71, 71, 0.03f, -0.5f, -0.5f);  // ~5,000 particles (5041)
+    particles.spawnGrid(100, 100, 0.02f, -0.5f, -0.5f);  // 10,000 particles
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -244,7 +244,7 @@ int main() {
         particles.velocities[i] = glm::vec2(velDist(gen), velDist(gen));
     }
 
-    Physics physics(0.016f, -9.81f, 0.8f, B, rho0, gamma);
+    Physics physics(0.016f, -9.81f, 0.8f, B, rho0, gamma);  // Normal gravity
 
     SpatialHash spatialHash(h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
@@ -281,11 +281,18 @@ int main() {
         physics.computePressures(particles);
         auto t4 = std::chrono::high_resolution_clock::now();
 
+        // Compute pressure forces
+        physics.computePressureForces(particles, spatialHash);
+        auto t5 = std::chrono::high_resolution_clock::now();
+        
+        // Apply gravity (adds to existing pressure accelerations)
+        physics.applyGravity(particles);
+        
         // Physics integration
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
         physics.velocityVerletStep2(particles);
-        auto t5 = std::chrono::high_resolution_clock::now();
+        auto t7 = std::chrono::high_resolution_clock::now();
 
         // Render with density-based coloring
         renderer.render(particles, projection, rho0, useDensityColor, usePressureColor);
@@ -297,9 +304,10 @@ int main() {
         auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
         auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
         auto pressureTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
-        auto physicsTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
-        auto renderTime = std::chrono::duration<float, std::milli>(t6 - t5).count();
-        perfMonitor.updateTiming(gridTime, densityTime, physicsTime, renderTime);
+        auto pressureForceTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
+        auto physicsTime = std::chrono::duration<float, std::milli>(t6 - t5).count();
+        auto renderTime = std::chrono::duration<float, std::milli>(t7 - t6).count();
+        perfMonitor.updateTiming(gridTime, densityTime, pressureForceTime, renderTime);
         
         glfwGetFramebufferSize(window, &width, &height);
         glm::mat4 textProjection = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);

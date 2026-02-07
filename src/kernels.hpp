@@ -19,6 +19,9 @@ public:
     // ∇W_spiky(r, h) = -45/(π*h⁶) * (h - r)² * (r/|r|) for r ≤ h
     static glm::vec2 gradW_spiky(const glm::vec2& r_vec, float h);
     
+    // Optimized version with pre-computed distance (avoids redundant sqrt)
+    static glm::vec2 gradW_spiky(const glm::vec2& r_vec, float r, float h);
+    
     // Viscosity kernel Laplacian
     // ∇²W_viscosity(r, h) = 45/(π*h⁶) * (h - r) for r ≤ h
     static float laplacianW_viscosity(float r, float h);

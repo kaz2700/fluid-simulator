@@ -22,14 +22,18 @@ float Kernels::W_poly6(float r, float h) {
 
 glm::vec2 Kernels::gradW_spiky(const glm::vec2& r_vec, float h) {
     float r = glm::length(r_vec);
-    
+    return gradW_spiky(r_vec, r, h);
+}
+
+glm::vec2 Kernels::gradW_spiky(const glm::vec2& r_vec, float r, float h) {
     if (r > h || r < 1e-6f) {
         return glm::vec2(0.0f, 0.0f);
     }
     
-    // -45/(π*h⁶) * (h - r)² / r
-    float coeff = -45.0f / (M_PI * std::pow(h, 6));
-    float term = std::pow(h - r, 2) / r;
+    // Pre-compute 1/h⁶ for efficiency
+    static const float h6 = h * h * h * h * h * h;
+    static const float coeff = -45.0f / (M_PI * h6);
+    float term = (h - r) * (h - r) / r;
     
     return coeff * term * r_vec;
 }

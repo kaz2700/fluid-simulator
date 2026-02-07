@@ -2,6 +2,8 @@
 #define PHYSICS_HPP
 
 #include "particles.hpp"
+#include "spatial.hpp"
+#include "kernels.hpp"
 
 struct PhysicsParams {
     float dt;
@@ -22,6 +24,8 @@ public:
     void velocityVerletStep2(Particles& particles);
     void handleBoundaries(Particles& particles, float left, float right, float bottom, float top);
     void computePressures(Particles& particles);
+    void computePressureForces(Particles& particles, const SpatialHash& grid);
+    void applyGravity(Particles& particles);
 
     void setGravity(float g) { params.gravity = g; }
     void setDamping(float d) { params.damping = d; }
