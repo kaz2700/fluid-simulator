@@ -31,7 +31,7 @@ struct Timer {
 
 struct Renderer {
     GLuint shaderProgram;
-    GLuint VAO, VBO, instancePosVBO, instanceDensityVBO;
+    GLuint VAO, VBO, instancePosVBO, instanceDensityVBO, instancePressureVBO;
     GLuint EBO;
 
     Renderer() {
@@ -44,6 +44,7 @@ struct Renderer {
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &instancePosVBO);
         glDeleteBuffers(1, &instanceDensityVBO);
+        glDeleteBuffers(1, &instancePressureVBO);
         glDeleteBuffers(1, &EBO);
         glDeleteProgram(shaderProgram);
     }
@@ -93,6 +94,7 @@ struct Renderer {
         glGenBuffers(1, &EBO);
         glGenBuffers(1, &instancePosVBO);
         glGenBuffers(1, &instanceDensityVBO);
+        glGenBuffers(1, &instancePressureVBO);
 
         glBindVertexArray(VAO);
 
@@ -118,19 +120,27 @@ struct Renderer {
         glEnableVertexAttribArray(2);
         glVertexAttribDivisor(2, 1);
 
+        // Instance pressure buffer
+        glBindBuffer(GL_ARRAY_BUFFER, instancePressureVBO);
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)0);
+        glEnableVertexAttribArray(3);
+        glVertexAttribDivisor(3, 1);
+
         glBindVertexArray(0);
     }
 
-    void render(const Particles& particles, const glm::mat4& projection, float restDensity, bool useDensityColor) {
+    void render(const Particles& particles, const glm::mat4& projection, float restDensity, bool useDensityColor, bool usePressureColor) {
         glUseProgram(shaderProgram);
 
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "uProjection"), 1, GL_FALSE, &projection[0][0]);
         glUniform2f(glGetUniformLocation(shaderProgram, "uParticleSize"), 0.015f, 0.015f);
         glUniform1f(glGetUniformLocation(shaderProgram, "uRestDensity"), restDensity);
         glUniform1i(glGetUniformLocation(shaderProgram, "uUseDensityColor"), useDensityColor ? 1 : 0);
+        glUniform1i(glGetUniformLocation(shaderProgram, "uUsePressureColor"), usePressureColor ? 1 : 0);
 
         size_t posSize = particles.positions.size() * sizeof(glm::vec2);
         size_t densitySize = particles.densities.size() * sizeof(float);
+        size_t pressureSize = particles.pressures.size() * sizeof(float);
 
         // Use glBufferSubData to avoid GPU memory reallocation
         glBindBuffer(GL_ARRAY_BUFFER, instancePosVBO);
@@ -140,6 +150,10 @@ struct Renderer {
         glBindBuffer(GL_ARRAY_BUFFER, instanceDensityVBO);
         glBufferData(GL_ARRAY_BUFFER, densitySize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
         glBufferSubData(GL_ARRAY_BUFFER, 0, densitySize, particles.densities.data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, instancePressureVBO);
+        glBufferData(GL_ARRAY_BUFFER, pressureSize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
+        glBufferSubData(GL_ARRAY_BUFFER, 0, pressureSize, particles.pressures.data());
 
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, particles.size());
@@ -191,7 +205,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 5: Density", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 6: Pressure", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -212,8 +226,9 @@ int main() {
     const float h = 0.08f;           // Smoothing length
     const float m = 0.02f;           // Particle mass
     const float rho0 = 1000.0f;      // Rest density
-    const float B = 200.0f;          // Stiffness (not used yet in Phase 5)
-    const float mu = 0.1f;           // Viscosity (not used yet in Phase 5)
+    const float B = 500.0f;          // Stiffness (increased for better pressure visualization)
+    const float mu = 0.1f;           // Viscosity (not used yet in Phase 6)
+    const float gamma = 7.0f;        // Pressure exponent
     
     sph::SPHParams sphParams(h, m, rho0, B, mu);
     sph::SPHSolver sphSolver(sphParams);
@@ -229,7 +244,7 @@ int main() {
         particles.velocities[i] = glm::vec2(velDist(gen), velDist(gen));
     }
 
-    Physics physics(0.016f, -9.81f, 0.8f);
+    Physics physics(0.016f, -9.81f, 0.8f, B, rho0, gamma);
 
     SpatialHash spatialHash(h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
@@ -240,6 +255,11 @@ int main() {
     glm::mat4 projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
     bool useDensityColor = true;
+    bool usePressureColor = false;
+    
+    // Key press delay mechanism
+    auto lastKeyTime = std::chrono::high_resolution_clock::now();
+    const double keyDelay = 0.3; // 300ms delay
 
     int frameCount = 0;
     while (!glfwWindowShouldClose(window)) {
@@ -256,24 +276,29 @@ int main() {
         // Compute densities using SPH
         sphSolver.computeDensities(particles, spatialHash);
         auto t3 = std::chrono::high_resolution_clock::now();
+        
+        // Compute pressures using Tait equation of state
+        physics.computePressures(particles);
+        auto t4 = std::chrono::high_resolution_clock::now();
 
         // Physics integration
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
         physics.velocityVerletStep2(particles);
-        auto t4 = std::chrono::high_resolution_clock::now();
+        auto t5 = std::chrono::high_resolution_clock::now();
 
         // Render with density-based coloring
-        renderer.render(particles, projection, rho0, useDensityColor);
-        auto t5 = std::chrono::high_resolution_clock::now();
+        renderer.render(particles, projection, rho0, useDensityColor, usePressureColor);
+        auto t6 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();
         
         // Calculate timing data
         auto gridTime = std::chrono::duration<float, std::milli>(t2 - t1).count();
         auto densityTime = std::chrono::duration<float, std::milli>(t3 - t2).count();
-        auto physicsTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
-        auto renderTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
+        auto pressureTime = std::chrono::duration<float, std::milli>(t4 - t3).count();
+        auto physicsTime = std::chrono::duration<float, std::milli>(t5 - t4).count();
+        auto renderTime = std::chrono::duration<float, std::milli>(t6 - t5).count();
         perfMonitor.updateTiming(gridTime, densityTime, physicsTime, renderTime);
         
         glfwGetFramebufferSize(window, &width, &height);
@@ -285,9 +310,24 @@ int main() {
         
 
         
-        // Toggle density coloring with 'D' key
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            useDensityColor = !useDensityColor;
+        // Handle key presses with delay
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        double timeSinceLastKey = std::chrono::duration<double>(currentTime - lastKeyTime).count();
+        
+        if (timeSinceLastKey > keyDelay) {
+            // Toggle density coloring with 'D' key
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                useDensityColor = !useDensityColor;
+                usePressureColor = false;
+                lastKeyTime = currentTime;
+            }
+            
+            // Toggle pressure coloring with 'P' key
+            if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+                usePressureColor = !usePressureColor;
+                useDensityColor = false;
+                lastKeyTime = currentTime;
+            }
         }
     }
 

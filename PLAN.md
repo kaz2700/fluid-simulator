@@ -46,8 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 5 Complete - Density Calculation Implemented  
-**Next**: Phase 6 - Pressure Calculation
+**Phase**: Phase 6 Complete - Pressure Calculation Implemented  
+**Next**: Phase 7 - Pressure Forces
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
