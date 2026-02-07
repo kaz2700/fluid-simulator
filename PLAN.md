@@ -46,8 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 7 Complete - Pressure Forces Implemented  
-**Next**: Phase 8 - Viscosity and External Forces
+**Phase**: Phase 8 Complete - Viscosity and External Forces Implemented  
+**Next**: Phase 9 - Stability and Tuning
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
@@ -320,7 +320,7 @@ void computePressureForces(Particles& particles, const SpatialHash& grid) {
 
 ---
 
-## Phase 8: Viscosity and External Forces
+## Phase 8: Viscosity and External Forces ✅ COMPLETED
 
 ### Step 8.1: Add Viscosity Forces
 ```cpp

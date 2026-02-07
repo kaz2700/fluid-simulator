@@ -109,8 +109,8 @@ PerformanceMonitor::PerformanceMonitor()
     : currentFPS(0.0), averageFPS(0.0), frameTimeMs(0.0),
       lastFrameTime(0.0), frameCount(0),
       gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
-      pressureForceTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
-      renderTimeMs(0.0f), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
+      pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f),
+      integrationTimeMs(0.0f), renderTimeMs(0.0f), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     initGL();
     createFontTexture();
 }
@@ -242,11 +242,12 @@ void PerformanceMonitor::update() {
 }
 
 void PerformanceMonitor::updateTiming(float gridTime, float densityTime, float pressureCalcTime,
-                                     float pressureForceTime, float gravityTime, float integrationTime, float renderTime) {
+                                     float pressureForceTime, float viscosityTime, float gravityTime, float integrationTime, float renderTime) {
     gridTimeMs = gridTime;
     densityTimeMs = densityTime;
     pressureCalcTimeMs = pressureCalcTime;
     pressureForceTimeMs = pressureForceTime;
+    viscosityTimeMs = viscosityTime;
     gravityTimeMs = gravityTime;
     integrationTimeMs = integrationTime;
     renderTimeMs = renderTime;
@@ -259,6 +260,7 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     ss << "Density: " << densityTimeMs << "ms\n";
     ss << "Pressure Calc: " << pressureCalcTimeMs << "ms\n";
     ss << "Pressure Forces: " << pressureForceTimeMs << "ms\n";
+    ss << "Viscosity: " << viscosityTimeMs << "ms\n";
     ss << "Gravity: " << gravityTimeMs << "ms\n";
     ss << "Integration: " << integrationTimeMs << "ms\n";
     ss << "Render: " << renderTimeMs << "ms\n";

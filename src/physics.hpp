@@ -12,19 +12,21 @@ struct PhysicsParams {
     float B;          // Pressure stiffness
     float rho0;       // Rest density
     float gamma;      // Pressure exponent
+    float mu;         // Viscosity coefficient
 };
 
 class Physics {
 public:
     Physics(float dt = 0.016f, float gravity = -9.81f, float damping = 0.8f,
-             float B = 100.0f, float rho0 = 1000.0f, float gamma = 7.0f)
-        : params{dt, gravity, damping, B, rho0, gamma} {}
+             float B = 100.0f, float rho0 = 1000.0f, float gamma = 7.0f, float mu = 0.1f)
+        : params{dt, gravity, damping, B, rho0, gamma, mu} {}
 
     void velocityVerletStep1(Particles& particles);
     void velocityVerletStep2(Particles& particles);
     void handleBoundaries(Particles& particles, float left, float right, float bottom, float top);
     void computePressures(Particles& particles);
     void computePressureForces(Particles& particles, const SpatialHash& grid);
+    void computeViscosityForces(Particles& particles, const SpatialHash& grid);
     void applyGravity(Particles& particles);
 
     void setGravity(float g) { params.gravity = g; }

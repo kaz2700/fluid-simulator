@@ -59,9 +59,63 @@ void Physics::computePressures(Particles& particles) {
 void Physics::applyGravity(Particles& particles) {
     size_t n = particles.size();
     glm::vec2 gravityVec(0.0f, params.gravity);
-    
+
     for (size_t i = 0; i < n; ++i) {
         particles.accelerations[i] += gravityVec;
+    }
+}
+
+void Physics::computeViscosityForces(Particles& particles, const SpatialHash& grid) {
+    size_t n = particles.size();
+    const float h = sph::Kernels::DEFAULT_H;
+    const float m = 0.02f;
+    const float h2 = h * h;
+    const float mu = params.mu;
+
+    // Pre-compute viscosity kernel coefficient: 45/(π*h⁶)
+    const float h6 = h2 * h2 * h2;
+    const float viscosityCoeff = 45.0f / (M_PI * h6);
+
+    // Use stack buffer for neighbors
+    size_t neighborBuffer[256];
+
+    for (size_t i = 0; i < n; ++i) {
+        glm::vec2 f_viscosity(0.0f);
+
+        // Get neighbors using fast stack-based method
+        size_t neighborCount = grid.getNeighborsFast(i, particles.positions, neighborBuffer, 256);
+
+        // Compute viscosity forces from neighbors
+        const glm::vec2& pi = particles.positions[i];
+        const glm::vec2& vi = particles.velocities[i];
+
+        for (size_t k = 0; k < neighborCount; ++k) {
+            size_t j = neighborBuffer[k];
+            if (i == j) continue;
+
+            const glm::vec2& pj = particles.positions[j];
+            float dx = pi.x - pj.x;
+            float dy = pi.y - pj.y;
+            float r2 = dx * dx + dy * dy;
+
+            // Use squared distance check first
+            if (r2 < h2 && r2 > 1e-8f) {
+                float r = sqrt(r2);
+
+                // Viscosity kernel Laplacian: 45/(π*h⁶) * (h - r)
+                float laplacian = viscosityCoeff * (h - r);
+
+                // Velocity difference
+                glm::vec2 velocity_diff = particles.velocities[j] - vi;
+
+                // Accumulate viscosity force
+                f_viscosity += m * velocity_diff / particles.densities[j] * laplacian;
+            }
+        }
+
+        // Apply viscosity coefficient and convert to acceleration
+        f_viscosity *= mu;
+        particles.accelerations[i] += f_viscosity / particles.densities[i];
     }
 }
 
@@ -103,7 +157,7 @@ void Physics::computePressureForces(Particles& particles, const SpatialHash& gri
             }
         }
         
-        particles.accelerations[i] = f_pressure / particles.densities[i];
+        particles.accelerations[i] += f_pressure / particles.densities[i];
         
         // Clamp accelerations to prevent explosion
         const float maxAcceleration = 50.0f;
