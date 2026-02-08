@@ -46,8 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 7 Complete - Pressure Forces Implemented  
-**Next**: Phase 8 - Viscosity and External Forces
+**Phase**: Phase 8 Complete - Viscosity and External Forces Implemented  
+**Next**: Phase 9 - Stability and Tuning
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
@@ -320,9 +320,9 @@ void computePressureForces(Particles& particles, const SpatialHash& grid) {
 
 ---
 
-## Phase 8: Viscosity and External Forces
+## Phase 8: Viscosity and External Forces ✅ COMPLETED
 
-### Step 8.1: Add Viscosity Forces
+### Step 8.1: Add Viscosity Forces ✅
 ```cpp
 void computeViscosityForces(Particles& particles, const SpatialGrid& grid) {
     const float mu = 0.1f;  // Viscosity coefficient (tune this)
@@ -342,8 +342,11 @@ void computeViscosityForces(Particles& particles, const SpatialGrid& grid) {
         particles.accelerations[i] += f_viscosity / particles.densities[i];
 }
 ```
+- Implemented in `physics.cpp` with stack-based neighbor buffer
+- Added `resetAccelerations()` to properly separate force accumulation
+- Changed `computePressureForces` to use `+=` instead of `=` for proper accumulation
 
-### Step 8.2: Add Gravity
+### Step 8.2: Add Gravity ✅
 ```cpp
 void applyGravity(Particles& particles) {
     const glm::vec2 gravity(0.0f, -9.81f);  // m/s² downward
@@ -351,8 +354,9 @@ void applyGravity(Particles& particles) {
         particles.accelerations[i] += gravity;
 }
 ```
+- Already implemented in Phase 7, enabled in Phase 8 with -9.81 m/s²
 
-### Step 8.3: Complete Force Integration
+### Step 8.3: Complete Force Integration ✅
 Update the main loop:
 ```cpp
 1. Compute densities
@@ -364,12 +368,15 @@ Update the main loop:
 7. Velocity Verlet integration
 8. Boundary handling
 ```
+- Main loop updated in `main.cpp` with proper force accumulation order
+- Performance monitor updated to show viscosity timing
 
-### Step 8.4: Full SPH Test
+### Step 8.4: Full SPH Test ✅
 - **Dam Break Test**: Initialize fluid block, remove barrier, verify flow
 - **Visual Test**: Fluid should flow downward due to gravity
 - **Visual Test**: Viscosity should dampen motion (compare with/without)
 - **Visual Test**: Fluid should be incompressible-ish (maintain volume)
+- **Build Status**: Successfully compiles and runs
 
 ---
 

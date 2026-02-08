@@ -3,6 +3,13 @@
 #include <cmath>
 #include "kernels.hpp"
 
+void Physics::resetAccelerations(Particles& particles) {
+    size_t n = particles.size();
+    for (size_t i = 0; i < n; ++i) {
+        particles.accelerations[i] = glm::vec2(0.0f);
+    }
+}
+
 void Physics::velocityVerletStep1(Particles& particles) {
     size_t n = particles.size();
     
@@ -103,7 +110,50 @@ void Physics::computePressureForces(Particles& particles, const SpatialHash& gri
             }
         }
         
-        particles.accelerations[i] = f_pressure / particles.densities[i];
+        particles.accelerations[i] += f_pressure / particles.densities[i];
+    }
+}
+
+void Physics::computeViscosityForces(Particles& particles, const SpatialHash& grid) {
+    size_t n = particles.size();
+    const float h = sph::Kernels::DEFAULT_H;
+    const float m = 0.02f; // Particle mass - should match what's used in density calculation
+    const float h2 = h * h;
+    const float mu = 0.1f; // Viscosity coefficient
+    
+    // Use stack buffer for neighbors (no heap allocation)
+    size_t neighborBuffer[256];
+    
+    for (size_t i = 0; i < n; ++i) {
+        glm::vec2 f_viscosity(0.0f);
+        
+        // Get neighbors using fast stack-based method
+        size_t neighborCount = grid.getNeighborsFast(i, particles.positions, neighborBuffer, 256);
+        
+        // Compute viscosity forces from neighbors
+        const glm::vec2& pi = particles.positions[i];
+        const glm::vec2& vi = particles.velocities[i];
+        
+        for (size_t k = 0; k < neighborCount; ++k) {
+            size_t j = neighborBuffer[k];
+            if (i == j) continue;
+            
+            const glm::vec2& pj = particles.positions[j];
+            float dx = pi.x - pj.x;
+            float dy = pi.y - pj.y;
+            float r2 = dx * dx + dy * dy;
+            
+            // Use squared distance check first (avoids sqrt when unnecessary)
+            if (r2 < h2 && r2 > 1e-8f) {
+                float r = sqrt(r2);
+                float laplacian = sph::Kernels::laplacianW_viscosity(r, h);
+                glm::vec2 velocity_diff = particles.velocities[j] - vi;
+                f_viscosity += m * velocity_diff / particles.densities[j] * laplacian;
+            }
+        }
+        
+        f_viscosity *= mu;
+        particles.accelerations[i] += f_viscosity / particles.densities[i];
         
         // Clamp accelerations to prevent explosion
         const float maxAcceleration = 50.0f;

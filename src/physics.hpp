@@ -23,8 +23,10 @@ public:
     void velocityVerletStep1(Particles& particles);
     void velocityVerletStep2(Particles& particles);
     void handleBoundaries(Particles& particles, float left, float right, float bottom, float top);
+    void resetAccelerations(Particles& particles);
     void computePressures(Particles& particles);
     void computePressureForces(Particles& particles, const SpatialHash& grid);
+    void computeViscosityForces(Particles& particles, const SpatialHash& grid);
     void applyGravity(Particles& particles);
 
     void setGravity(float g) { params.gravity = g; }

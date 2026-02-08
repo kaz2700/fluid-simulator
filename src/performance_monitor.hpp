@@ -16,7 +16,8 @@ public:
     
     void update();
     void updateTiming(float gridTime, float densityTime, float pressureCalcTime, 
-                     float pressureForceTime, float gravityTime, float integrationTime, float renderTime);
+                     float pressureForceTime, float viscosityTime, float gravityTime, 
+                     float integrationTime, float renderTime);
     void render(const glm::mat4& projection, int screenWidth, int screenHeight, size_t particleCount = 0);
     
 private:
@@ -43,6 +44,7 @@ private:
     float densityTimeMs;
     float pressureCalcTimeMs;
     float pressureForceTimeMs;
+    float viscosityTimeMs;
     float gravityTimeMs;
     float integrationTimeMs;
     float renderTimeMs;
