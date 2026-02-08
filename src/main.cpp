@@ -29,9 +29,17 @@ struct Timer {
     }
 };
 
+// Phase 10: Color mode enum
+enum ColorMode {
+    COLOR_DEFAULT = 0,
+    COLOR_DENSITY = 1,
+    COLOR_VELOCITY = 2,
+    COLOR_PRESSURE = 3
+};
+
 struct Renderer {
     GLuint shaderProgram;
-    GLuint VAO, VBO, instancePosVBO, instanceDensityVBO, instancePressureVBO;
+    GLuint VAO, VBO, instancePosVBO, instanceDensityVBO, instancePressureVBO, instanceVelocityVBO;
     GLuint EBO;
 
     Renderer() {
@@ -45,6 +53,7 @@ struct Renderer {
         glDeleteBuffers(1, &instancePosVBO);
         glDeleteBuffers(1, &instanceDensityVBO);
         glDeleteBuffers(1, &instancePressureVBO);
+        glDeleteBuffers(1, &instanceVelocityVBO);
         glDeleteBuffers(1, &EBO);
         glDeleteProgram(shaderProgram);
     }
@@ -95,6 +104,7 @@ struct Renderer {
         glGenBuffers(1, &instancePosVBO);
         glGenBuffers(1, &instanceDensityVBO);
         glGenBuffers(1, &instancePressureVBO);
+        glGenBuffers(1, &instanceVelocityVBO);
 
         glBindVertexArray(VAO);
 
@@ -126,21 +136,29 @@ struct Renderer {
         glEnableVertexAttribArray(3);
         glVertexAttribDivisor(3, 1);
 
+        // Phase 10: Instance velocity buffer
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVelocityVBO);
+        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribDivisor(4, 1);
+
         glBindVertexArray(0);
     }
 
-    void render(const Particles& particles, const glm::mat4& projection, float restDensity, bool useDensityColor, bool usePressureColor) {
+    // Phase 10: Updated render function with color mode and velocity
+    void render(const Particles& particles, const glm::mat4& projection, float restDensity, ColorMode colorMode, float maxVelocity) {
         glUseProgram(shaderProgram);
 
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "uProjection"), 1, GL_FALSE, &projection[0][0]);
         glUniform2f(glGetUniformLocation(shaderProgram, "uParticleSize"), 0.015f, 0.015f);
         glUniform1f(glGetUniformLocation(shaderProgram, "uRestDensity"), restDensity);
-        glUniform1i(glGetUniformLocation(shaderProgram, "uUseDensityColor"), useDensityColor ? 1 : 0);
-        glUniform1i(glGetUniformLocation(shaderProgram, "uUsePressureColor"), usePressureColor ? 1 : 0);
+        glUniform1f(glGetUniformLocation(shaderProgram, "uMaxVelocity"), maxVelocity);
+        glUniform1i(glGetUniformLocation(shaderProgram, "uColorMode"), colorMode);
 
         size_t posSize = particles.positions.size() * sizeof(glm::vec2);
         size_t densitySize = particles.densities.size() * sizeof(float);
         size_t pressureSize = particles.pressures.size() * sizeof(float);
+        size_t velocitySize = particles.velocities.size() * sizeof(glm::vec2);
 
         // Use glBufferSubData to avoid GPU memory reallocation
         glBindBuffer(GL_ARRAY_BUFFER, instancePosVBO);
@@ -154,6 +172,11 @@ struct Renderer {
         glBindBuffer(GL_ARRAY_BUFFER, instancePressureVBO);
         glBufferData(GL_ARRAY_BUFFER, pressureSize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
         glBufferSubData(GL_ARRAY_BUFFER, 0, pressureSize, particles.pressures.data());
+
+        // Phase 10: Upload velocity data for velocity-based coloring
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVelocityVBO);
+        glBufferData(GL_ARRAY_BUFFER, velocitySize, nullptr, GL_DYNAMIC_DRAW); // Orphan the buffer
+        glBufferSubData(GL_ARRAY_BUFFER, 0, velocitySize, particles.velocities.data());
 
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, particles.size());
@@ -193,6 +216,95 @@ private:
     }
 };
 
+// Phase 10: Simple background grid renderer
+struct GridRenderer {
+    GLuint shaderProgram;
+    GLuint VAO, VBO;
+
+    GridRenderer() {
+        const char* vertexShaderSource = R"(
+            #version 120
+            attribute vec2 aPos;
+            uniform mat4 uProjection;
+            void main() {
+                gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
+            }
+        )";
+
+        const char* fragmentShaderSource = R"(
+            #version 120
+            void main() {
+                gl_FragColor = vec4(0.2, 0.2, 0.2, 1.0);  // Dark gray grid lines
+            }
+        )";
+
+        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
+        glCompileShader(vertexShader);
+
+        GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
+        glCompileShader(fragmentShader);
+
+        shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+
+        // Create grid lines
+        std::vector<float> gridVertices;
+        float gridSize = 2.0f;
+        float gridSpacing = 0.2f;
+        int numLines = static_cast<int>(gridSize / gridSpacing);
+
+        // Vertical lines
+        for (int i = -numLines; i <= numLines; ++i) {
+            float x = i * gridSpacing;
+            gridVertices.push_back(x);
+            gridVertices.push_back(-gridSize);
+            gridVertices.push_back(x);
+            gridVertices.push_back(gridSize);
+        }
+
+        // Horizontal lines
+        for (int i = -numLines; i <= numLines; ++i) {
+            float y = i * gridSpacing;
+            gridVertices.push_back(-gridSize);
+            gridVertices.push_back(y);
+            gridVertices.push_back(gridSize);
+            gridVertices.push_back(y);
+        }
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(float), gridVertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+    }
+
+    ~GridRenderer() {
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+        glDeleteProgram(shaderProgram);
+    }
+
+    void render(const glm::mat4& projection) {
+        glUseProgram(shaderProgram);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "uProjection"), 1, GL_FALSE, &projection[0][0]);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, 84);  // 42 lines * 2 vertices each
+        glBindVertexArray(0);
+    }
+};
+
 int main() {
     glfwSetErrorCallback([](int error, const char* description) {});
 
@@ -205,7 +317,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 9: Stability & Tuning", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 10: Rendering Enhancements", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -261,12 +373,13 @@ int main() {
     std::vector<size_t> neighbors;
 
     Renderer renderer;
+    GridRenderer gridRenderer;
     PerformanceMonitor perfMonitor;
 
     glm::mat4 projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
-    bool useDensityColor = true;
-    bool usePressureColor = false;
+    // Phase 10: Color mode selection
+    ColorMode colorMode = COLOR_DENSITY;
     
     // Key press delay mechanism
     auto lastKeyTime = std::chrono::high_resolution_clock::now();
@@ -327,8 +440,12 @@ int main() {
         physics.velocityVerletStep2(particles);
         auto t8 = std::chrono::high_resolution_clock::now();
 
-        // Render with density-based coloring
-        renderer.render(particles, projection, sphParams.rho0, useDensityColor, usePressureColor);
+        // Phase 10: Render background grid first
+        gridRenderer.render(projection);
+        
+        // Phase 10: Render particles with color mode
+        float maxVelocity = 5.0f;  // Reference max velocity for coloring
+        renderer.render(particles, projection, sphParams.rho0, colorMode, maxVelocity);
         auto t9 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();
@@ -358,17 +475,31 @@ int main() {
         double timeSinceLastKey = std::chrono::duration<double>(currentTime - lastKeyTime).count();
         
         if (timeSinceLastKey > keyDelay) {
-            // Toggle density coloring with 'D' key
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                useDensityColor = !useDensityColor;
-                usePressureColor = false;
+            // Phase 10: Color mode selection with keys 1, 2, 3
+            if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+                colorMode = COLOR_DENSITY;
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+                colorMode = COLOR_VELOCITY;
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+                colorMode = COLOR_PRESSURE;
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) {
+                colorMode = COLOR_DEFAULT;
                 lastKeyTime = currentTime;
             }
             
-            // Toggle pressure coloring with 'P' key
+            // Keep old D and P keys for backward compatibility
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                colorMode = COLOR_DENSITY;
+                lastKeyTime = currentTime;
+            }
             if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-                usePressureColor = !usePressureColor;
-                useDensityColor = false;
+                colorMode = COLOR_PRESSURE;
                 lastKeyTime = currentTime;
             }
         }
