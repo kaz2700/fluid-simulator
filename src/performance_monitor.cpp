@@ -107,10 +107,11 @@ static const unsigned char fontData[96][5] = {
 
 PerformanceMonitor::PerformanceMonitor()
     : currentFPS(0.0), averageFPS(0.0), frameTimeMs(0.0),
-      lastFrameTime(0.0), frameCount(0),
+      lastFrameTime(0.0), frameCount(0), startTime(0.0),
       gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
-      pressureForceTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
+      pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
       renderTimeMs(0.0f), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
+    startTime = glfwGetTime();
     initGL();
     createFontTexture();
 }
@@ -267,7 +268,14 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     ss << "Render: " << renderTimeMs << "ms\n";
     ss << "Total: " << frameTimeMs << "ms (";
     ss << std::setprecision(1) << currentFPS << " FPS)\n";
-    ss << "Particles: " << particleCount;
+    ss << "Particles: " << particleCount << "\n";
+    
+    // Add elapsed time
+    double currentTime = glfwGetTime();
+    double elapsedTime = currentTime - startTime;
+    int minutes = static_cast<int>(elapsedTime) / 60;
+    double seconds = elapsedTime - minutes * 60;
+    ss << "Time: " << minutes << ":" << std::setprecision(1) << std::setw(4) << std::setfill('0') << seconds;
     
     std::string text = ss.str();
     

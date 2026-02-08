@@ -39,6 +39,7 @@ private:
     double frameTimeMs;
     double lastFrameTime;
     int frameCount;
+    double startTime;
     
     float gridTimeMs;
     float densityTimeMs;
