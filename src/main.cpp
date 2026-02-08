@@ -454,7 +454,7 @@ int main() {
         particles.velocities[i] = glm::vec2(0.0f, 0.0f);  // Zero initial velocity for all particles
     }
 
-    Physics physics(sphParams.dt, sphParams.gravity, sphParams.damping, sphParams.B, sphParams.rho0, sphParams.gamma);
+    Physics physics(sphParams.dt, sphParams.gravity, sphParams.damping, sphParams.B, sphParams.rho0, sphParams.gamma, sphParams.mu);
 
     SpatialHash spatialHash(sphParams.h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
@@ -716,11 +716,13 @@ int main() {
             // Phase 11: Adjust viscosity with Left/Right arrows
             if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
                 sphParams.mu += viscosityStep;
+                physics.setViscosity(sphParams.mu);
                 perfMonitor.setSPHParameters(sphParams);
                 lastKeyTime = currentTime;
             }
             if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
                 sphParams.mu = std::max(0.0f, sphParams.mu - viscosityStep);
+                physics.setViscosity(sphParams.mu);
                 perfMonitor.setSPHParameters(sphParams);
                 lastKeyTime = currentTime;
             }

@@ -44,13 +44,14 @@ struct PhysicsParams {
     float B;          // Pressure stiffness
     float rho0;       // Rest density
     float gamma;      // Pressure exponent
+    float mu;         // Viscosity coefficient
 };
 
 class Physics {
 public:
     Physics(float dt = 0.016f, float gravity = -9.81f, float damping = 0.8f,
-             float B = 100.0f, float rho0 = 1000.0f, float gamma = 7.0f)
-        : params{dt, gravity, damping, B, rho0, gamma} {}
+             float B = 100.0f, float rho0 = 1000.0f, float gamma = 7.0f, float mu = 0.1f)
+        : params{dt, gravity, damping, B, rho0, gamma, mu} {}
 
     void velocityVerletStep1(Particles& particles);
     void velocityVerletStep2(Particles& particles);
@@ -78,6 +79,7 @@ public:
     void setStiffness(float B) { params.B = B; }
     void setRestDensity(float rho0) { params.rho0 = rho0; }
     void setPressureExponent(float gamma) { params.gamma = gamma; }
+    void setViscosity(float mu) { params.mu = mu; }
 
 private:
     PhysicsParams params;
