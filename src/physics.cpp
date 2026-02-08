@@ -119,7 +119,7 @@ void Physics::computeViscosityForces(Particles& particles, const SpatialHash& gr
     const float h = sph::Kernels::DEFAULT_H;
     const float m = 0.02f; // Particle mass - should match what's used in density calculation
     const float h2 = h * h;
-    const float mu = 0.0f; // Viscosity coefficient
+    const float mu = 0.1f; // Viscosity coefficient
     
     // Use stack buffer for neighbors (no heap allocation)
     size_t neighborBuffer[256];
