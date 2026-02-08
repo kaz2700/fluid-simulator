@@ -110,7 +110,7 @@ PerformanceMonitor::PerformanceMonitor()
       lastFrameTime(0.0), frameCount(0), startTime(0.0),
       gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
       pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
-      renderTimeMs(0.0f), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
+      renderTimeMs(0.0f), adaptiveTimestep(0.016f), isStable(true), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     startTime = glfwGetTime();
     initGL();
     createFontTexture();
@@ -275,7 +275,12 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     double elapsedTime = currentTime - startTime;
     int minutes = static_cast<int>(elapsedTime) / 60;
     double seconds = elapsedTime - minutes * 60;
-    ss << "Time: " << minutes << ":" << std::setprecision(1) << std::setw(4) << std::setfill('0') << seconds;
+    ss << "Time: " << minutes << ":" << std::setprecision(1) << std::setw(4) << std::setfill('0') << seconds << "\n";
+    
+    // Phase 9: Display adaptive timestep and stability
+    ss << std::setprecision(4);
+    ss << "Timestep: " << adaptiveTimestep << "ms\n";
+    ss << "Status: " << (isStable ? "STABLE" : "UNSTABLE");
     
     std::string text = ss.str();
     

@@ -205,7 +205,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 8: Viscosity & External Forces", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 9: Stability & Tuning", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -222,19 +222,30 @@ int main() {
         glViewport(0, 0, w, h);
     });
 
-    // SPH parameters
-    const float h = 0.08f;           // Smoothing length
-    const float m = 0.02f;           // Particle mass
-    const float rho0 = 550.0f;       // Rest density (adjusted to match actual particle density ~557)
-    const float B = 50.0f;           // Stiffness (reduced for stability with single moving particle)
-    const float mu = 0.1f;           // Viscosity (not used yet in Phase 6)
-    const float gamma = 7.0f;        // Pressure exponent
+    // Phase 9: Centralized SPH Parameters
+    SPHParameters sphParams;
+    sphParams.h = 0.08f;              // Smoothing length
+    sphParams.m = 0.02f;              // Particle mass
+    sphParams.rho0 = 550.0f;          // Rest density (adjusted to match actual particle density ~557)
+    sphParams.B = 50.0f;              // Stiffness
+    sphParams.mu = 0.1f;              // Viscosity
+    sphParams.gamma = 7.0f;           // Pressure exponent
+    sphParams.dt = 0.016f;            // Initial time step (16ms = ~60 FPS)
+    sphParams.minDt = 0.0001f;        // Minimum time step (0.1ms)
+    sphParams.maxDt = 0.01f;          // Maximum time step (10ms)
+    sphParams.CFL = 0.4f;             // Courant-Friedrichs-Lewy number
+    sphParams.gravity = -9.81f;       // Gravity
+    sphParams.damping = 0.8f;         // Boundary damping
+    sphParams.adaptiveTimestep = true; // Enable adaptive timestep
     
-    sph::SPHParams sphParams(h, m, rho0, B, mu);
-    sph::SPHSolver sphSolver(sphParams);
+    sph::SPHParams sphSolverParams(sphParams.h, sphParams.m, sphParams.rho0, sphParams.B, sphParams.mu);
+    sph::SPHSolver sphSolver(sphSolverParams);
 
     Particles particles;
-    particles.spawnGrid(71, 71, 0.02f, -0.5f, -0.5f);  // ~5,000 particles
+    const int gridCols = 71;
+    const int gridRows = 71;
+    const float gridSpacing = 0.02f;
+    particles.spawnGrid(gridCols, gridRows, gridSpacing, -0.5f, -0.5f);  // ~5,000 particles
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -244,9 +255,9 @@ int main() {
         particles.velocities[i] = glm::vec2(0.0f, 0.0f);  // Zero initial velocity for all particles
     }
 
-    Physics physics(0.016f, 0.0f, 0.8f, B, rho0, gamma);  // Disable gravity for testing
+    Physics physics(sphParams.dt, sphParams.gravity, sphParams.damping, sphParams.B, sphParams.rho0, sphParams.gamma);
 
-    SpatialHash spatialHash(h, 2.0f, 2.0f, -1.0f, -1.0f);
+    SpatialHash spatialHash(sphParams.h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
 
     Renderer renderer;
@@ -292,10 +303,24 @@ int main() {
         physics.computeViscosityForces(particles, spatialHash);
         auto t6 = std::chrono::high_resolution_clock::now();
 
-        // Apply gravity (disabled for testing)
-        // physics.applyGravity(particles);
+        // Apply gravity
+        physics.applyGravity(particles);
         auto t7 = std::chrono::high_resolution_clock::now();
 
+        // Phase 9: Compute adaptive timestep
+        float adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
+        physics.setTimestep(adaptiveDt);
+        perfMonitor.setAdaptiveTimestep(adaptiveDt);
+        
+        // Phase 9: Stability checks
+        bool isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
+        perfMonitor.setStabilityStatus(isStable);
+        
+        // Phase 9: Auto-reset if unstable
+        if (!isStable) {
+            physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+        }
+        
         // Physics integration
         physics.velocityVerletStep1(particles);
         physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
@@ -303,7 +328,7 @@ int main() {
         auto t8 = std::chrono::high_resolution_clock::now();
 
         // Render with density-based coloring
-        renderer.render(particles, projection, rho0, useDensityColor, usePressureColor);
+        renderer.render(particles, projection, sphParams.rho0, useDensityColor, usePressureColor);
         auto t9 = std::chrono::high_resolution_clock::now();
 
         perfMonitor.update();

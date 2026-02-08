@@ -20,6 +20,12 @@ public:
                      float integrationTime, float renderTime);
     void render(const glm::mat4& projection, int screenWidth, int screenHeight, size_t particleCount = 0);
     
+    // Phase 9: Performance baseline tracking
+    void startBaselineMeasurement();
+    void endBaselineMeasurement();
+    void setAdaptiveTimestep(float dt) { adaptiveTimestep = dt; }
+    void setStabilityStatus(bool stable) { isStable = stable; }
+    
 private:
     void initGL();
     void createShaders();
@@ -49,6 +55,10 @@ private:
     float gravityTimeMs;
     float integrationTimeMs;
     float renderTimeMs;
+    
+    // Phase 9: Adaptive timestep display
+    float adaptiveTimestep;
+    bool isStable;
     
     GLuint shaderProgram;
     GLuint VAO, VBO;

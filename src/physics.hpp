@@ -4,6 +4,38 @@
 #include "particles.hpp"
 #include "spatial.hpp"
 #include "kernels.hpp"
+#include <cmath>
+#include <limits>
+
+// Centralized SPH Parameters structure
+struct SPHParameters {
+    // Spatial parameters
+    float h = 0.08f;              // Smoothing length
+    float m = 0.02f;              // Particle mass
+    
+    // Fluid properties
+    float rho0 = 550.0f;          // Rest density (kg/m³)
+    float B = 50.0f;              // Pressure stiffness
+    float gamma = 7.0f;           // Pressure exponent
+    float mu = 0.1f;              // Viscosity coefficient
+    
+    // Simulation parameters
+    float dt = 0.016f;            // Time step
+    float minDt = 0.0001f;        // Minimum time step
+    float maxDt = 0.01f;          // Maximum time step
+    float CFL = 0.4f;             // Courant-Friedrichs-Lewy number
+    
+    // Physics parameters
+    float gravity = -9.81f;       // Gravity (m/s²)
+    float damping = 0.8f;         // Boundary damping
+    
+    // Stability parameters
+    float maxAcceleration = 50.0f;  // Maximum acceleration magnitude
+    float maxVelocity = 10.0f;      // Maximum velocity magnitude
+    
+    // Adaptive timestep enable
+    bool adaptiveTimestep = true;
+};
 
 struct PhysicsParams {
     float dt;
@@ -28,6 +60,17 @@ public:
     void computePressureForces(Particles& particles, const SpatialHash& grid);
     void computeViscosityForces(Particles& particles, const SpatialHash& grid);
     void applyGravity(Particles& particles);
+
+    // Phase 9: Adaptive time stepping
+    float computeAdaptiveTimestep(const Particles& particles, float h);
+    
+    // Phase 9: Numerical stability checks
+    bool checkStability(const Particles& particles);
+    bool validateParticleData(const Particles& particles);
+    bool checkForNaNOrInf(const Particles& particles);
+    
+    // Phase 9: Auto-reset on explosion
+    void resetSimulationIfUnstable(Particles& particles, int cols, int rows, float spacing, float startX, float startY);
 
     void setGravity(float g) { params.gravity = g; }
     void setDamping(float d) { params.damping = d; }
