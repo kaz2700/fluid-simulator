@@ -8,6 +8,7 @@
 #include <deque>
 #include <string>
 #include <chrono>
+#include "physics.hpp"
 
 class PerformanceMonitor {
 public:
@@ -26,7 +27,11 @@ public:
     void setAdaptiveTimestep(float dt) { adaptiveTimestep = dt; }
     void setStabilityStatus(bool stable) { isStable = stable; }
     
+    // Phase 11: SPH parameters display
+    void setSPHParameters(const SPHParameters& params) { sphParams = params; }
+    
 private:
+    SPHParameters sphParams;
     void initGL();
     void createShaders();
     void createFontTexture();

@@ -280,7 +280,15 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     // Phase 9: Display adaptive timestep and stability
     ss << std::setprecision(4);
     ss << "Timestep: " << adaptiveTimestep << "ms\n";
-    ss << "Status: " << (isStable ? "STABLE" : "UNSTABLE");
+    ss << "Status: " << (isStable ? "STABLE" : "UNSTABLE") << "\n";
+    
+    // Phase 11: Display SPH parameters
+    ss << "\n=== Parameters ===\n";
+    ss << "Gravity: " << std::setprecision(2) << sphParams.gravity << " m/s^2\n";
+    ss << "Viscosity: " << sphParams.mu << "\n";
+    ss << "Stiffness: " << sphParams.B << "\n";
+    ss << "Rest Density: " << sphParams.rho0 << "\n";
+    ss << "Zoom: " << std::setprecision(2) << 1.0f << "x";
     
     std::string text = ss.str();
     

@@ -305,6 +305,89 @@ struct GridRenderer {
     }
 };
 
+// Phase 11: Mouse and keyboard interaction state
+struct InteractionState {
+    bool leftMousePressed = false;
+    bool rightMousePressed = false;
+    double lastMouseX = 0.0;
+    double lastMouseY = 0.0;
+    float zoomLevel = 1.0f;
+    bool paused = false;
+    
+    // For continuous particle addition
+    float particleAddTimer = 0.0f;
+    const float particleAddInterval = 0.05f; // Add particles every 50ms when dragging
+};
+
+// Phase 11: Screen to world coordinate conversion
+glm::vec2 screenToWorld(double screenX, double screenY, int screenWidth, int screenHeight, 
+                        const glm::mat4& projection) {
+    // Convert screen coordinates to normalized device coordinates (-1 to 1)
+    float ndcX = (2.0f * screenX) / screenWidth - 1.0f;
+    float ndcY = 1.0f - (2.0f * screenY) / screenHeight; // Flip Y
+    
+    // Convert NDC to world coordinates using inverse projection
+    glm::mat4 invProjection = glm::inverse(projection);
+    glm::vec4 worldPos = invProjection * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
+    return glm::vec2(worldPos.x, worldPos.y);
+}
+
+// Phase 11: Scenario presets
+enum class Scenario {
+    DAM_BREAK,
+    WATER_DROP,
+    DOUBLE_DAM_BREAK,
+    FOUNTAIN
+};
+
+void spawnScenario(Particles& particles, Scenario scenario, float particleSpacing) {
+    particles.clear();
+    
+    switch (scenario) {
+        case Scenario::DAM_BREAK: {
+            // Classic dam break - block of water
+            int cols = 71;
+            int rows = 71;
+            particles.spawnGrid(cols, rows, particleSpacing, -0.5f, -0.5f);
+            break;
+        }
+        case Scenario::WATER_DROP: {
+            // Circular cluster falling from top
+            float centerX = 0.0f;
+            float centerY = 0.5f;
+            float radius = 0.3f;
+            
+            for (float y = -radius; y <= radius; y += particleSpacing) {
+                for (float x = -radius; x <= radius; x += particleSpacing) {
+                    if (x * x + y * y <= radius * radius) {
+                        particles.addParticle(glm::vec2(centerX + x, centerY + y), glm::vec2(0.0f, -1.0f));
+                    }
+                }
+            }
+            break;
+        }
+        case Scenario::DOUBLE_DAM_BREAK: {
+            // Two fluid blocks colliding
+            int cols = 35;
+            int rows = 71;
+            // Left block
+            particles.spawnGrid(cols, rows, particleSpacing, -0.8f, -0.5f);
+            // Right block
+            size_t offset = particles.size();
+            for (int r = 0; r < rows; ++r) {
+                for (int c = 0; c < cols; ++c) {
+                    particles.addParticle(glm::vec2(0.1f + c * particleSpacing, -0.5f + r * particleSpacing));
+                }
+            }
+            break;
+        }
+        case Scenario::FOUNTAIN: {
+            // Empty initially, particles added continuously
+            break;
+        }
+    }
+}
+
 int main() {
     glfwSetErrorCallback([](int error, const char* description) {});
 
@@ -317,7 +400,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 10: Rendering Enhancements", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "SPH 2D Simulator - Phase 11: User Interaction", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -333,6 +416,9 @@ int main() {
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int w, int h) {
         glViewport(0, 0, w, h);
     });
+    
+    // Phase 11: Setup interaction state
+    InteractionState interaction;
 
     // Phase 9: Centralized SPH Parameters
     SPHParameters sphParams;
@@ -378,14 +464,49 @@ int main() {
 
     glm::mat4 projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
+    // Phase 11: Pass SPH parameters to PerformanceMonitor for display
+    perfMonitor.setSPHParameters(sphParams);
+
     // Phase 10: Color mode selection
     ColorMode colorMode = COLOR_DENSITY;
     
     // Key press delay mechanism
     auto lastKeyTime = std::chrono::high_resolution_clock::now();
     const double keyDelay = 0.3; // 300ms delay
+    
+    // Phase 11: Parameter adjustment step sizes
+    const float gravityStep = 1.0f;
+    const float viscosityStep = 0.01f;
 
     int frameCount = 0;
+    
+    // Phase 11: Set up mouse callbacks
+    glfwSetWindowUserPointer(window, &interaction);
+    
+    glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int mods) {
+        auto* state = static_cast<InteractionState*>(glfwGetWindowUserPointer(window));
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            state->leftMousePressed = (action == GLFW_PRESS);
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            state->rightMousePressed = (action == GLFW_PRESS);
+        }
+    });
+    
+    glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) {
+        auto* state = static_cast<InteractionState*>(glfwGetWindowUserPointer(window));
+        state->lastMouseX = xpos;
+        state->lastMouseY = ypos;
+    });
+    
+    glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) {
+        auto* state = static_cast<InteractionState*>(glfwGetWindowUserPointer(window));
+        state->zoomLevel *= (yoffset > 0) ? 1.1f : 0.9f;
+        state->zoomLevel = glm::clamp(state->zoomLevel, 0.1f, 5.0f);
+    });
+    
+    // Phase 11: Fixed timestep for interaction timing
+    const float interactionDt = 0.016f;
+    
     while (!glfwWindowShouldClose(window)) {
         auto frameStart = std::chrono::high_resolution_clock::now();
         
@@ -397,48 +518,93 @@ int main() {
         spatialHash.update(particles.positions);
         auto t2 = std::chrono::high_resolution_clock::now();
         
-        // Compute densities using SPH
-        sphSolver.computeDensities(particles, spatialHash);
-        auto t3 = std::chrono::high_resolution_clock::now();
+        // Initialize timing variables
+        auto t3 = t2, t4 = t2, t5 = t2, t6 = t2, t7 = t2, t8 = t2;
+        float adaptiveDt = sphParams.dt;
+        bool isStable = true;
         
-        // Compute pressures using Tait equation of state
-        physics.computePressures(particles);
-        auto t4 = std::chrono::high_resolution_clock::now();
+        // Phase 11: Skip physics if paused
+        if (!interaction.paused) {
+            // Compute densities using SPH
+            sphSolver.computeDensities(particles, spatialHash);
+            t3 = std::chrono::high_resolution_clock::now();
+            
+            // Compute pressures using Tait equation of state
+            physics.computePressures(particles);
+            t4 = std::chrono::high_resolution_clock::now();
 
-        // Reset accelerations for new frame
-        physics.resetAccelerations(particles);
+            // Reset accelerations for new frame
+            physics.resetAccelerations(particles);
 
-        // Compute pressure forces
-        physics.computePressureForces(particles, spatialHash);
-        auto t5 = std::chrono::high_resolution_clock::now();
+            // Compute pressure forces
+            physics.computePressureForces(particles, spatialHash);
+            t5 = std::chrono::high_resolution_clock::now();
 
-        // Compute viscosity forces
-        physics.computeViscosityForces(particles, spatialHash);
-        auto t6 = std::chrono::high_resolution_clock::now();
+            // Compute viscosity forces
+            physics.computeViscosityForces(particles, spatialHash);
+            t6 = std::chrono::high_resolution_clock::now();
 
-        // Apply gravity
-        physics.applyGravity(particles);
-        auto t7 = std::chrono::high_resolution_clock::now();
+            // Apply gravity
+            physics.applyGravity(particles);
+            t7 = std::chrono::high_resolution_clock::now();
 
-        // Phase 9: Compute adaptive timestep
-        float adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
-        physics.setTimestep(adaptiveDt);
-        perfMonitor.setAdaptiveTimestep(adaptiveDt);
-        
-        // Phase 9: Stability checks
-        bool isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
-        perfMonitor.setStabilityStatus(isStable);
-        
-        // Phase 9: Auto-reset if unstable
-        if (!isStable) {
-            physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+            // Phase 9: Compute adaptive timestep
+            adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
+            physics.setTimestep(adaptiveDt);
+            perfMonitor.setAdaptiveTimestep(adaptiveDt);
+            
+            // Phase 9: Stability checks
+            isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
+            perfMonitor.setStabilityStatus(isStable);
+            
+            // Phase 9: Auto-reset if unstable
+            if (!isStable) {
+                physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+            }
+            
+            // Physics integration
+            physics.velocityVerletStep1(particles);
+            physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
+            physics.velocityVerletStep2(particles);
+            t8 = std::chrono::high_resolution_clock::now();
         }
         
-        // Physics integration
-        physics.velocityVerletStep1(particles);
-        physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
-        physics.velocityVerletStep2(particles);
-        auto t8 = std::chrono::high_resolution_clock::now();
+        // Phase 11: Handle mouse interactions (add/remove particles) - outside pause check
+        if (interaction.leftMousePressed) {
+            interaction.particleAddTimer += interactionDt;
+            if (interaction.particleAddTimer >= interaction.particleAddInterval) {
+                interaction.particleAddTimer = 0.0f;
+                glm::vec2 worldPos = screenToWorld(interaction.lastMouseX, interaction.lastMouseY, 
+                                                   width, height, projection);
+                // Add a small cluster of particles
+                particles.addParticle(worldPos);
+                particles.addParticle(worldPos + glm::vec2(0.02f, 0.0f));
+                particles.addParticle(worldPos + glm::vec2(-0.02f, 0.0f));
+                particles.addParticle(worldPos + glm::vec2(0.0f, 0.02f));
+                particles.addParticle(worldPos + glm::vec2(0.0f, -0.02f));
+            }
+        }
+        
+        if (interaction.rightMousePressed) {
+            glm::vec2 worldPos = screenToWorld(interaction.lastMouseX, interaction.lastMouseY, 
+                                               width, height, projection);
+            particles.removeParticlesNear(worldPos, 0.1f); // Remove within 0.1 radius
+        }
+        
+        // Phase 11: Handle fountain scenario - add particles continuously from top center
+        if (particles.size() == 0) {
+            // If no particles, add some from fountain
+            static float fountainTimer = 0.0f;
+            fountainTimer += interactionDt;
+            if (fountainTimer > 0.1f) {
+                fountainTimer = 0.0f;
+                particles.addParticle(glm::vec2(0.0f, 0.8f), glm::vec2(0.0f, -3.0f));
+            }
+        }
+
+        // Phase 11: Update projection with zoom
+        float zoom = interaction.zoomLevel;
+        glm::mat4 projection = glm::ortho(-1.0f * zoom, 1.0f * zoom, -1.0f * zoom, 1.0f * zoom, -1.0f, 1.0f);
 
         // Phase 10: Render background grid first
         gridRenderer.render(projection);
@@ -500,6 +666,65 @@ int main() {
             }
             if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
                 colorMode = COLOR_PRESSURE;
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Reset simulation with R key
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+                particles.clear();
+                particles.spawnGrid(gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+                interaction.zoomLevel = 1.0f;
+                interaction.paused = false;
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Pause/Resume with Space
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+                interaction.paused = !interaction.paused;
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Adjust gravity with Up/Down arrows
+            if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+                sphParams.gravity += gravityStep;
+                physics.setGravity(sphParams.gravity);
+                perfMonitor.setSPHParameters(sphParams);
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+                sphParams.gravity -= gravityStep;
+                physics.setGravity(sphParams.gravity);
+                perfMonitor.setSPHParameters(sphParams);
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Adjust viscosity with Left/Right arrows
+            if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+                sphParams.mu += viscosityStep;
+                perfMonitor.setSPHParameters(sphParams);
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+                sphParams.mu = std::max(0.0f, sphParams.mu - viscosityStep);
+                perfMonitor.setSPHParameters(sphParams);
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Scenario presets with function keys
+            if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+                spawnScenario(particles, Scenario::DAM_BREAK, gridSpacing);
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
+                spawnScenario(particles, Scenario::WATER_DROP, gridSpacing);
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
+                spawnScenario(particles, Scenario::DOUBLE_DAM_BREAK, gridSpacing);
+                lastKeyTime = currentTime;
+            }
+            if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS) {
+                spawnScenario(particles, Scenario::FOUNTAIN, gridSpacing);
                 lastKeyTime = currentTime;
             }
         }

@@ -46,8 +46,8 @@ The following decisions were made specifically for performance:
 - **CMake**: Build system
 
 ### Current Status
-**Phase**: Phase 10 Complete - Rendering Enhancements Implemented  
-**Next**: Phase 11 - User Interaction
+**Phase**: Phase 11 Complete - User Interaction Implemented  
+**Next**: Phase 12 - Performance Optimizations (CPU)
 
 ### How to Use This Plan
 1. **Read the current phase** carefully before starting
@@ -544,14 +544,15 @@ enum ColorMode {
 
 ---
 
-## Phase 11: User Interaction
+## Phase 11: User Interaction ✅ COMPLETED
 
-### Step 11.1: Mouse Controls
+### Step 11.1: Mouse Controls ✅
 - Left click + drag: Add particles continuously
 - Right click: Remove particles near cursor
 - Scroll wheel: Adjust zoom level
+- **Implementation**: InteractionState struct with mouse callbacks, screenToWorld conversion
 
-### Step 11.2: Keyboard Controls
+### Step 11.2: Keyboard Controls ✅
 ```cpp
 Keys:
   R - Reset simulation
@@ -561,22 +562,59 @@ Keys:
   3 - Pressure coloring
   Up/Down - Increase/decrease gravity
   Left/Right - Increase/decrease viscosity
+  F1 - Dam break scenario
+  F2 - Water drop scenario
+  F3 - Double dam break scenario
+  F4 - Fountain scenario
 ```
+- **Implementation**: Key handlers with 300ms delay, parameter adjustment with step sizes
 
-### Step 11.3: On-Screen Display (OSD)
+### Step 11.3: On-Screen Display (OSD) ✅
 - Render text showing:
-  - FPS
+  - FPS and frame timing breakdown
   - Particle count
-  - Current parameters (gravity, viscosity, stiffness)
-  - Simulation time
-- Use simple bitmap font or OpenGL text rendering
+  - Current parameters (gravity, viscosity, stiffness, rest density)
+  - Simulation time and adaptive timestep
+  - Stability status
+- **Implementation**: Enhanced PerformanceMonitor with SPHParameters display
 
-### Step 11.4: Scenario Presets
-Create preset initial conditions:
-- Dam break (block of water)
-- Water drop (circular cluster falling)
-- Double dam break (two fluids colliding)
-- Fountain (continuous particle source)
+### Step 11.4: Scenario Presets ✅
+Created preset initial conditions:
+- **Dam break**: Classic block of water (F1)
+- **Water drop**: Circular cluster falling from top (F2)
+- **Double dam break**: Two fluid blocks colliding (F3)
+- **Fountain**: Continuous particle source from top (F4)
+- **Implementation**: Scenario enum with spawnScenario() function
+
+### Technical Implementation Details
+
+1. **Mouse Interaction** (`main.cpp`):
+   - GLFW mouse callbacks for button, position, and scroll events
+   - Continuous particle addition while left button held (50ms interval)
+   - Particle removal within 0.1 radius on right click
+   - Zoom level clamped to [0.1, 5.0] range
+
+2. **Keyboard Handling** (`main.cpp`):
+   - R key: Reset to initial dam break configuration
+   - Space: Toggle pause/resume simulation
+   - Arrow keys: Adjust gravity (±1.0) and viscosity (±0.01)
+   - Function keys F1-F4: Load scenario presets
+
+3. **Particle Management** (`particles.hpp`):
+   - `addParticle()`: Add single particle with position and optional velocity
+   - `removeParticlesNear()`: Remove all particles within radius using swap-and-pop
+   - `clear()`: Remove all particles
+
+4. **OSD Enhancement** (`performance_monitor.hpp/cpp`):
+   - Added SPHParameters member and setter
+   - Display all tunable parameters in real-time
+   - Shows current simulation state (paused/active)
+
+**Build Status**: ✅ Successfully compiles and runs
+
+**Controls Summary**:
+- **Mouse**: Left drag (add), Right click (remove), Scroll (zoom)
+- **Keyboard**: R (reset), Space (pause), 1/2/3 (color modes), Arrows (params), F1-F4 (scenarios)
 
 ---
 

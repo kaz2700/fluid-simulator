@@ -38,6 +38,49 @@ struct Particles {
     size_t size() const {
         return positions.size();
     }
+
+    // Phase 11: Add a single particle at position
+    void addParticle(const glm::vec2& pos, const glm::vec2& vel = glm::vec2(0.0f)) {
+        positions.push_back(pos);
+        velocities.push_back(vel);
+        accelerations.push_back(glm::vec2(0.0f));
+        densities.push_back(0.0f);
+        pressures.push_back(0.0f);
+    }
+
+    // Phase 11: Remove particles within radius of position
+    void removeParticlesNear(const glm::vec2& pos, float radius) {
+        float radiusSq = radius * radius;
+        size_t writeIdx = 0;
+        
+        for (size_t i = 0; i < positions.size(); ++i) {
+            glm::vec2 diff = positions[i] - pos;
+            float distSq = diff.x * diff.x + diff.y * diff.y;
+            if (distSq > radiusSq) {
+                // Keep this particle
+                if (writeIdx != i) {
+                    positions[writeIdx] = positions[i];
+                    velocities[writeIdx] = velocities[i];
+                    accelerations[writeIdx] = accelerations[i];
+                    densities[writeIdx] = densities[i];
+                    pressures[writeIdx] = pressures[i];
+                }
+                ++writeIdx;
+            }
+        }
+        
+        // Resize to remove deleted particles
+        resize(writeIdx);
+    }
+
+    // Phase 11: Clear all particles
+    void clear() {
+        positions.clear();
+        velocities.clear();
+        accelerations.clear();
+        densities.clear();
+        pressures.clear();
+    }
 };
 
 #endif
