@@ -110,7 +110,8 @@ PerformanceMonitor::PerformanceMonitor()
       lastFrameTime(0.0), frameCount(0), startTime(0.0),
       gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
       pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
-      renderTimeMs(0.0f), adaptiveTimestep(0.016f), isStable(true), shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
+      renderTimeMs(0.0f), adaptiveTimestep(0.016f), isStable(true), currentZoom(1.0f),
+      shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     startTime = glfwGetTime();
     initGL();
     createFontTexture();
@@ -288,7 +289,7 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     ss << "Viscosity: " << sphParams.mu << "\n";
     ss << "Stiffness: " << sphParams.B << "\n";
     ss << "Rest Density: " << sphParams.rho0 << "\n";
-    ss << "Zoom: " << std::setprecision(2) << 1.0f << "x";
+    ss << "Zoom: " << std::setprecision(2) << currentZoom << "x";
     
     std::string text = ss.str();
     
@@ -368,4 +369,56 @@ void PerformanceMonitor::renderText(const std::string& text, float x, float y, f
         glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 4);
     }
+}
+
+void PerformanceMonitor::renderControls(const glm::mat4& projection, int screenWidth, int screenHeight) {
+    // Controls text
+    std::string controlsText = 
+        "=== CONTROLS ===\n"
+        "Mouse:\n"
+        "  Left Drag  - Add particles\n"
+        "  Right Click - Remove particles\n"
+        "  Scroll     - Zoom\n\n"
+        "Keyboard:\n"
+        "  R        - Reset simulation\n"
+        "  Space    - Pause/Resume\n"
+        "  G        - Toggle gravity\n"
+        "  1/2/3    - Color modes\n"
+        "  ↑/↓      - Adjust gravity\n"
+        "  ←/→      - Adjust viscosity\n"
+        "  F1-F4    - Scenarios\n"
+        "  0        - Default color";
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glUseProgram(shaderProgram);
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "uProjection"), 1, GL_FALSE, &projection[0][0]);
+    glUniform3f(glGetUniformLocation(shaderProgram, "uColor"), 0.8f, 0.8f, 0.8f); // Light gray for controls
+    glUniform1i(glGetUniformLocation(shaderProgram, "uTexture"), 0);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fontTexture);
+    
+    glBindVertexArray(VAO);
+    
+    // Render controls in top-right corner
+    float x = screenWidth - 200.0f; // Start 200px from right edge
+    float y = 10.0f;
+    float scale = 1.5f; // Smaller scale for controls
+    float lineHeight = 10.0f * scale;
+    
+    // Render each line
+    std::istringstream lineStream(controlsText);
+    std::string line;
+    float currentY = y;
+    
+    while (std::getline(lineStream, line)) {
+        renderText(line, x, currentY, scale);
+        currentY += lineHeight;
+    }
+    
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
 }

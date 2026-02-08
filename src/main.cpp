@@ -313,6 +313,7 @@ struct InteractionState {
     double lastMouseY = 0.0;
     float zoomLevel = 1.0f;
     bool paused = false;
+    bool gravityEnabled = true;
     
     // For continuous particle addition
     float particleAddTimer = 0.0f;
@@ -476,7 +477,7 @@ int main() {
     
     // Phase 11: Parameter adjustment step sizes
     const float gravityStep = 1.0f;
-    const float viscosityStep = 0.01f;
+    const float viscosityStep = 0.1f;
 
     int frameCount = 0;
     
@@ -544,8 +545,10 @@ int main() {
             physics.computeViscosityForces(particles, spatialHash);
             t6 = std::chrono::high_resolution_clock::now();
 
-            // Apply gravity
-            physics.applyGravity(particles);
+            // Apply gravity (only if enabled)
+            if (interaction.gravityEnabled) {
+                physics.applyGravity(particles);
+            }
             t7 = std::chrono::high_resolution_clock::now();
 
             // Phase 9: Compute adaptive timestep
@@ -629,7 +632,13 @@ int main() {
         
         glfwGetFramebufferSize(window, &width, &height);
         glm::mat4 textProjection = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);
+        
+        // Phase 11: Update zoom level in display
+        perfMonitor.setZoomLevel(interaction.zoomLevel);
+        
+        // Render performance monitor (left side) and controls (right side)
         perfMonitor.render(textProjection, width, height, particles.size());
+        perfMonitor.renderControls(textProjection, width, height);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -681,6 +690,12 @@ int main() {
             // Phase 11: Pause/Resume with Space
             if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
                 interaction.paused = !interaction.paused;
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 11: Toggle gravity with G
+            if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+                interaction.gravityEnabled = !interaction.gravityEnabled;
                 lastKeyTime = currentTime;
             }
             

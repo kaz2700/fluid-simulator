@@ -30,6 +30,12 @@ public:
     // Phase 11: SPH parameters display
     void setSPHParameters(const SPHParameters& params) { sphParams = params; }
     
+    // Phase 11: Set zoom level for display
+    void setZoomLevel(float zoom) { currentZoom = zoom; }
+    
+    // Phase 11: Render controls help
+    void renderControls(const glm::mat4& projection, int screenWidth, int screenHeight);
+    
 private:
     SPHParameters sphParams;
     void initGL();
@@ -64,6 +70,9 @@ private:
     // Phase 9: Adaptive timestep display
     float adaptiveTimestep;
     bool isStable;
+    
+    // Phase 11: Zoom level display
+    float currentZoom;
     
     GLuint shaderProgram;
     GLuint VAO, VBO;
