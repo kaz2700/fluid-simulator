@@ -41,7 +41,13 @@ public:
         threadCount = numThreads; 
         multiThreadingOn = multiThreadingEnabled;
     }
-    
+
+    // Phase 14: GPU mode status
+    void setGPUMode(bool enabled, bool available) {
+        gpuModeEnabled = enabled;
+        gpuAvailable = available;
+    }
+
 private:
     SPHParameters sphParams;
     void initGL();
@@ -83,7 +89,11 @@ private:
     // Phase 13: Multi-threading info
     size_t threadCount;
     bool multiThreadingOn;
-    
+
+    // Phase 14: GPU mode info
+    bool gpuModeEnabled;
+    bool gpuAvailable;
+
     GLuint shaderProgram;
     GLuint VAO, VBO;
     GLuint fontTexture;

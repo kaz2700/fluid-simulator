@@ -16,6 +16,7 @@
 #include "performance_monitor.hpp"
 #include "thread_pool.hpp"
 #include "physics_parallel.hpp"
+#include "gpu_compute.hpp"
 
 // Simple timer for profiling
 struct Timer {
@@ -309,6 +310,7 @@ struct GridRenderer {
 
 // Phase 11: Mouse and keyboard interaction state
 // Phase 13: Added multiThreading toggle
+// Phase 14: Added GPU mode toggle
 struct InteractionState {
     bool leftMousePressed = false;
     bool rightMousePressed = false;
@@ -318,7 +320,8 @@ struct InteractionState {
     bool paused = false;
     bool gravityEnabled = true;
     bool multiThreadingEnabled = true;  // Phase 13: Toggle for multi-threading
-    
+    bool gpuModeEnabled = false;        // Phase 14: Toggle for GPU compute
+
     // For continuous particle addition
     float particleAddTimer = 0.0f;
     const float particleAddInterval = 0.05f; // Add particles every 50ms when dragging
@@ -471,6 +474,36 @@ int main() {
     ParallelPhysics parallelPhysics(threadPool, physics, sphSolver);
     std::cout << "[INFO] Thread pool initialized with " << threadPool.size() << " threads" << std::endl;
 
+    // Phase 14: Initialize GPU compute
+    GPUCompute gpuCompute;
+    bool gpuAvailable = gpuCompute.initialize(MAX_EXPECTED_PARTICLES);
+    if (gpuAvailable) {
+        std::cout << "[INFO] GPU compute initialized successfully" << std::endl;
+        // Upload initial particles
+        gpuCompute.setNumParticles(particles.size());
+        gpuCompute.uploadParticles(particles.positions, particles.velocities, 
+                                   particles.accelerations, particles.densities, 
+                                   particles.pressures);
+        // Set initial parameters
+        GPUCompute::GPUParams gpuParams;
+        gpuParams.h = sphParams.h;
+        gpuParams.m = sphParams.m;
+        gpuParams.rho0 = sphParams.rho0;
+        gpuParams.B = sphParams.B;
+        gpuParams.mu = sphParams.mu;
+        gpuParams.gamma = sphParams.gamma;
+        gpuParams.dt = sphParams.dt;
+        gpuParams.gravity = sphParams.gravity;
+        gpuParams.numParticles = static_cast<int>(particles.size());
+        gpuParams.domainMin = -1.0f;
+        gpuParams.domainMax = 1.0f;
+        gpuParams.damping = sphParams.damping;
+        gpuCompute.setParams(gpuParams);
+    } else {
+        std::cout << "[INFO] GPU compute not available, using CPU mode" << std::endl;
+        interaction.gpuModeEnabled = false;
+    }
+
     SpatialHash spatialHash(sphParams.h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
 
@@ -485,6 +518,9 @@ int main() {
     
     // Phase 13: Set thread info in performance monitor
     perfMonitor.setThreadInfo(threadPool.size(), interaction.multiThreadingEnabled);
+
+    // Phase 14: Set GPU mode info in performance monitor
+    perfMonitor.setGPUMode(interaction.gpuModeEnabled, gpuAvailable);
 
     // Phase 10: Color mode selection
     ColorMode colorMode = COLOR_DENSITY;
@@ -543,9 +579,51 @@ int main() {
         bool isStable = true;
         
         // Phase 11: Skip physics if paused
+        // Phase 14: GPU mode takes priority over CPU modes
         // Phase 13: Use parallel physics when multi-threading is enabled
         if (!interaction.paused) {
-            if (interaction.multiThreadingEnabled) {
+            if (interaction.gpuModeEnabled && gpuAvailable) {
+                // Phase 14: GPU physics computation
+                // Update params
+                GPUCompute::GPUParams gpuParams;
+                gpuParams.h = sphParams.h;
+                gpuParams.m = sphParams.m;
+                gpuParams.rho0 = sphParams.rho0;
+                gpuParams.B = sphParams.B;
+                gpuParams.mu = sphParams.mu;
+                gpuParams.gamma = sphParams.gamma;
+                gpuParams.dt = sphParams.dt;
+                gpuParams.gravity = interaction.gravityEnabled ? sphParams.gravity : 0.0f;
+                gpuParams.numParticles = static_cast<int>(particles.size());
+                gpuParams.domainMin = -1.0f;
+                gpuParams.domainMax = 1.0f;
+                gpuParams.damping = sphParams.damping;
+                gpuCompute.setParams(gpuParams);
+                
+                // Upload current state
+                gpuCompute.setNumParticles(particles.size());
+                gpuCompute.uploadParticles(particles.positions, particles.velocities,
+                                           particles.accelerations, particles.densities,
+                                           particles.pressures);
+                
+                t3 = std::chrono::high_resolution_clock::now();
+                
+                // Run GPU simulation step
+                gpuCompute.step();
+                
+                t8 = std::chrono::high_resolution_clock::now();
+                t4 = t5 = t6 = t7 = t8;
+                
+                // Download results
+                gpuCompute.downloadParticles(particles.positions, particles.velocities,
+                                             particles.accelerations, particles.densities,
+                                             particles.pressures);
+                
+                // GPU mode doesn't support adaptive timestep yet
+                adaptiveDt = sphParams.dt;
+                perfMonitor.setAdaptiveTimestep(adaptiveDt);
+                perfMonitor.setStabilityStatus(true);
+            } else if (interaction.multiThreadingEnabled) {
                 // Parallel physics computations
                 parallelPhysics.computeDensitiesParallel(particles, spatialHash, sphParams.h, sphParams.m);
                 t3 = std::chrono::high_resolution_clock::now();
@@ -807,6 +885,14 @@ int main() {
                 parallelPhysics.setParallelEnabled(interaction.multiThreadingEnabled);
                 perfMonitor.setThreadInfo(threadPool.size(), interaction.multiThreadingEnabled);
                 std::cout << "[INFO] Multi-threading " << (interaction.multiThreadingEnabled ? "enabled" : "disabled") << std::endl;
+                lastKeyTime = currentTime;
+            }
+
+            // Phase 14: Toggle GPU mode with C key
+            if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && gpuAvailable) {
+                interaction.gpuModeEnabled = !interaction.gpuModeEnabled;
+                perfMonitor.setGPUMode(interaction.gpuModeEnabled, gpuAvailable);
+                std::cout << "[INFO] GPU mode " << (interaction.gpuModeEnabled ? "enabled" : "disabled") << std::endl;
                 lastKeyTime = currentTime;
             }
         }

@@ -112,6 +112,7 @@ PerformanceMonitor::PerformanceMonitor()
       pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
       renderTimeMs(0.0f), adaptiveTimestep(0.016f), isStable(true), currentZoom(1.0f),
       threadCount(1), multiThreadingOn(false),
+      gpuModeEnabled(false), gpuAvailable(false),
       shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     startTime = glfwGetTime();
     initGL();
@@ -295,8 +296,13 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     // Phase 13: Display multi-threading info
     ss << "\n=== Threading ===\n";
     ss << "Threads: " << threadCount << "\n";
-    ss << "Mode: " << (multiThreadingOn ? "PARALLEL" : "SEQUENTIAL");
-    
+    ss << "Mode: " << (multiThreadingOn ? "PARALLEL" : "SEQUENTIAL") << "\n";
+
+    // Phase 14: Display GPU mode info
+    ss << "\n=== GPU Mode ===\n";
+    ss << "Available: " << (gpuAvailable ? "YES" : "NO") << "\n";
+    ss << "Enabled: " << (gpuModeEnabled ? "ON" : "OFF");
+
     std::string text = ss.str();
     
     // Calculate text position (top-left corner with padding)
@@ -379,7 +385,7 @@ void PerformanceMonitor::renderText(const std::string& text, float x, float y, f
 
 void PerformanceMonitor::renderControls(const glm::mat4& projection, int screenWidth, int screenHeight) {
     // Controls text
-    std::string controlsText = 
+    std::string controlsText =
         "=== CONTROLS ===\n"
         "Mouse:\n"
         "  Left Drag  - Add particles\n"
@@ -389,6 +395,7 @@ void PerformanceMonitor::renderControls(const glm::mat4& projection, int screenW
         "  R        - Reset simulation\n"
         "  Space    - Pause/Resume\n"
         "  G        - Toggle gravity\n"
+        "  C        - Toggle GPU mode\n"
         "  T        - Toggle multi-threading\n"
         "  1/2/3    - Color modes\n"
         "  ↑/↓      - Adjust gravity\n"
