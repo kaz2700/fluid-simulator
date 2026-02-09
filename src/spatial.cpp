@@ -2,7 +2,7 @@
 
 SpatialHash::SpatialHash(float smoothingLength, float domainWidth, float domainHeight, float originX, float originY)
     : cellSize(smoothingLength), domainWidth(domainWidth), domainHeight(domainHeight),
-      originX(originX), originY(originY) {
+      originX(originX), originY(originY), currentVersion(1) {
     
     gridCols = static_cast<int>(std::ceil(domainWidth / cellSize));
     gridRows = static_cast<int>(std::ceil(domainHeight / cellSize));
@@ -11,7 +11,18 @@ SpatialHash::SpatialHash(float smoothingLength, float domainWidth, float domainH
 }
 
 void SpatialHash::update(const std::vector<glm::vec2>& positions) {
-    clear();
+    // Phase 12: Increment version counter instead of clearing all cells
+    // This avoids iterating over all cells and clearing them
+    currentVersion++;
+    
+    // Handle version overflow (very unlikely but possible)
+    if (currentVersion == 0) {
+        currentVersion = 1;
+        for (auto& cell : grid) {
+            cell.version = 0;
+            cell.particles.clear();
+        }
+    }
     
     for (size_t i = 0; i < positions.size(); ++i) {
         int cx, cy;
@@ -19,7 +30,10 @@ void SpatialHash::update(const std::vector<glm::vec2>& positions) {
         
         int cellIdx = cellIndex(cx, cy);
         if (cellIdx >= 0) {
-            grid[cellIdx].push_back(i);
+            auto* cell = getCell(cellIdx);
+            if (cell) {
+                cell->particles.push_back(i);
+            }
         }
     }
 }
@@ -36,7 +50,11 @@ void SpatialHash::getNeighbors(size_t particleIndex, const std::vector<glm::vec2
             int cellIdx = cellIndex(cx + dx, cy + dy);
             
             if (cellIdx >= 0) {
-                for (size_t neighborIdx : grid[cellIdx]) {
+                // Phase 12: Only access cells from current version
+                const auto& cell = grid[cellIdx];
+                if (cell.version != currentVersion) continue;
+                
+                for (size_t neighborIdx : cell.particles) {
                     if (neighborIdx != particleIndex) {
                         glm::vec2 diff = positions[neighborIdx] - pos;
                         float distSq = glm::dot(diff, diff);
@@ -65,8 +83,11 @@ size_t SpatialHash::getNeighborsFast(size_t particleIndex, const std::vector<glm
             int cellIdx = cellIndex(cx + dx, cy + dy);
 
             if (cellIdx >= 0) {
+                // Phase 12: Only access cells from current version
                 const auto& cell = grid[cellIdx];
-                for (size_t neighborIdx : cell) {
+                if (cell.version != currentVersion) continue;
+                
+                for (size_t neighborIdx : cell.particles) {
                     if (neighborIdx != particleIndex && count < bufferSize) {
                         glm::vec2 diff = positions[neighborIdx] - pos;
                         float distSq = glm::dot(diff, diff);
@@ -83,8 +104,16 @@ size_t SpatialHash::getNeighborsFast(size_t particleIndex, const std::vector<glm
 }
 
 void SpatialHash::clear() {
-    // Fast clear by swapping with empty vectors (avoids destructing elements)
-    for (auto& cell : grid) {
-        std::vector<size_t>().swap(cell);
+    // Phase 12: Instead of clearing all cells, just increment version
+    // This is much faster than iterating over all cells
+    currentVersion++;
+    
+    // Handle version overflow
+    if (currentVersion == 0) {
+        currentVersion = 1;
+        for (auto& cell : grid) {
+            cell.version = 0;
+            cell.particles.clear();
+        }
     }
 }

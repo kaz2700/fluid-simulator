@@ -444,6 +444,12 @@ int main() {
     const int gridCols = 71;
     const int gridRows = 71;
     const float gridSpacing = 0.02f;
+    
+    // Phase 12: Memory optimization - pre-allocate capacity for particles
+    // Reserve space for initial grid + extra for user-added particles
+    const size_t MAX_EXPECTED_PARTICLES = 15000;
+    particles.reserve(MAX_EXPECTED_PARTICLES);
+    
     particles.spawnGrid(gridCols, gridRows, gridSpacing, -0.5f, -0.5f);  // ~5,000 particles
 
     std::random_device rd;

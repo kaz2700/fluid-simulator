@@ -19,6 +19,15 @@ struct Particles {
         pressures.resize(count);
     }
 
+    // Phase 12: Memory optimization - reserve capacity to prevent reallocations
+    void reserve(size_t capacity) {
+        positions.reserve(capacity);
+        velocities.reserve(capacity);
+        accelerations.reserve(capacity);
+        densities.reserve(capacity);
+        pressures.reserve(capacity);
+    }
+
     void spawnGrid(int cols, int rows, float spacing, float startX, float startY) {
         size_t count = cols * rows;
         resize(count);
