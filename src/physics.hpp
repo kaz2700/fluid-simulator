@@ -31,7 +31,7 @@ struct SPHParameters {
     
     // Stability parameters
     float maxAcceleration = 50.0f;  // Maximum acceleration magnitude
-    float maxVelocity = 10.0f;      // Maximum velocity magnitude
+    float maxVelocity = 100.0f;      // Maximum velocity magnitude (increased from 10.0f)
     
     // Adaptive timestep enable
     bool adaptiveTimestep = true;

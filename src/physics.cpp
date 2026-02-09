@@ -202,9 +202,9 @@ bool Physics::checkStability(const Particles& particles) {
     size_t n = particles.size();
     
     for (size_t i = 0; i < n; ++i) {
-        // Check for excessive velocities
+        // Check for excessive velocities (increased threshold for normal fluid simulation)
         float velMag = glm::length(particles.velocities[i]);
-        if (velMag > 10.0f) {
+        if (velMag > 100.0f) {  // Increased from 10.0f to prevent false positives
             return false;
         }
         
