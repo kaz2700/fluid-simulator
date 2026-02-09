@@ -111,6 +111,7 @@ PerformanceMonitor::PerformanceMonitor()
       gridTimeMs(0.0f), densityTimeMs(0.0f), pressureCalcTimeMs(0.0f),
       pressureForceTimeMs(0.0f), viscosityTimeMs(0.0f), gravityTimeMs(0.0f), integrationTimeMs(0.0f),
       renderTimeMs(0.0f), adaptiveTimestep(0.016f), isStable(true), currentZoom(1.0f),
+      threadCount(1), multiThreadingOn(false),
       shaderProgram(0), VAO(0), VBO(0), fontTexture(0) {
     startTime = glfwGetTime();
     initGL();
@@ -289,7 +290,12 @@ void PerformanceMonitor::render(const glm::mat4& projection, int screenWidth, in
     ss << "Viscosity: " << sphParams.mu << "\n";
     ss << "Stiffness: " << sphParams.B << "\n";
     ss << "Rest Density: " << sphParams.rho0 << "\n";
-    ss << "Zoom: " << std::setprecision(2) << currentZoom << "x";
+    ss << "Zoom: " << std::setprecision(2) << currentZoom << "x\n";
+    
+    // Phase 13: Display multi-threading info
+    ss << "\n=== Threading ===\n";
+    ss << "Threads: " << threadCount << "\n";
+    ss << "Mode: " << (multiThreadingOn ? "PARALLEL" : "SEQUENTIAL");
     
     std::string text = ss.str();
     
@@ -383,6 +389,7 @@ void PerformanceMonitor::renderControls(const glm::mat4& projection, int screenW
         "  R        - Reset simulation\n"
         "  Space    - Pause/Resume\n"
         "  G        - Toggle gravity\n"
+        "  T        - Toggle multi-threading\n"
         "  1/2/3    - Color modes\n"
         "  ↑/↓      - Adjust gravity\n"
         "  ←/→      - Adjust viscosity\n"

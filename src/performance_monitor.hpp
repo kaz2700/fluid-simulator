@@ -36,6 +36,12 @@ public:
     // Phase 11: Render controls help
     void renderControls(const glm::mat4& projection, int screenWidth, int screenHeight);
     
+    // Phase 13: Multi-threading status
+    void setThreadInfo(size_t numThreads, bool multiThreadingEnabled) { 
+        threadCount = numThreads; 
+        multiThreadingOn = multiThreadingEnabled;
+    }
+    
 private:
     SPHParameters sphParams;
     void initGL();
@@ -73,6 +79,10 @@ private:
     
     // Phase 11: Zoom level display
     float currentZoom;
+    
+    // Phase 13: Multi-threading info
+    size_t threadCount;
+    bool multiThreadingOn;
     
     GLuint shaderProgram;
     GLuint VAO, VBO;

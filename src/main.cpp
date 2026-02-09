@@ -14,6 +14,8 @@
 #include "spatial.hpp"
 #include "sph.hpp"
 #include "performance_monitor.hpp"
+#include "thread_pool.hpp"
+#include "physics_parallel.hpp"
 
 // Simple timer for profiling
 struct Timer {
@@ -306,6 +308,7 @@ struct GridRenderer {
 };
 
 // Phase 11: Mouse and keyboard interaction state
+// Phase 13: Added multiThreading toggle
 struct InteractionState {
     bool leftMousePressed = false;
     bool rightMousePressed = false;
@@ -314,6 +317,7 @@ struct InteractionState {
     float zoomLevel = 1.0f;
     bool paused = false;
     bool gravityEnabled = true;
+    bool multiThreadingEnabled = true;  // Phase 13: Toggle for multi-threading
     
     // For continuous particle addition
     float particleAddTimer = 0.0f;
@@ -462,6 +466,11 @@ int main() {
 
     Physics physics(sphParams.dt, sphParams.gravity, sphParams.damping, sphParams.B, sphParams.rho0, sphParams.gamma, sphParams.mu);
 
+    // Phase 13: Initialize thread pool and parallel physics
+    ThreadPool threadPool;  // Uses hardware concurrency
+    ParallelPhysics parallelPhysics(threadPool, physics, sphSolver);
+    std::cout << "[INFO] Thread pool initialized with " << threadPool.size() << " threads" << std::endl;
+
     SpatialHash spatialHash(sphParams.h, 2.0f, 2.0f, -1.0f, -1.0f);
     std::vector<size_t> neighbors;
 
@@ -473,6 +482,9 @@ int main() {
 
     // Phase 11: Pass SPH parameters to PerformanceMonitor for display
     perfMonitor.setSPHParameters(sphParams);
+    
+    // Phase 13: Set thread info in performance monitor
+    perfMonitor.setThreadInfo(threadPool.size(), interaction.multiThreadingEnabled);
 
     // Phase 10: Color mode selection
     ColorMode colorMode = COLOR_DENSITY;
@@ -531,51 +543,89 @@ int main() {
         bool isStable = true;
         
         // Phase 11: Skip physics if paused
+        // Phase 13: Use parallel physics when multi-threading is enabled
         if (!interaction.paused) {
-            // Compute densities using SPH
-            sphSolver.computeDensities(particles, spatialHash);
-            t3 = std::chrono::high_resolution_clock::now();
-            
-            // Compute pressures using Tait equation of state
-            physics.computePressures(particles);
-            t4 = std::chrono::high_resolution_clock::now();
+            if (interaction.multiThreadingEnabled) {
+                // Parallel physics computations
+                parallelPhysics.computeDensitiesParallel(particles, spatialHash, sphParams.h, sphParams.m);
+                t3 = std::chrono::high_resolution_clock::now();
+                
+                parallelPhysics.computePressuresParallel(particles, sphParams.rho0, sphParams.B, sphParams.gamma);
+                t4 = std::chrono::high_resolution_clock::now();
 
-            // Reset accelerations for new frame
-            physics.resetAccelerations(particles);
+                parallelPhysics.resetAccelerationsParallel(particles);
+                
+                parallelPhysics.computePressureForcesParallel(particles, spatialHash, sphParams.h, sphParams.m);
+                t5 = std::chrono::high_resolution_clock::now();
 
-            // Compute pressure forces
-            physics.computePressureForces(particles, spatialHash);
-            t5 = std::chrono::high_resolution_clock::now();
+                parallelPhysics.computeViscosityForcesParallel(particles, spatialHash, sphParams.h, sphParams.m, sphParams.mu);
+                t6 = std::chrono::high_resolution_clock::now();
 
-            // Compute viscosity forces
-            physics.computeViscosityForces(particles, spatialHash);
-            t6 = std::chrono::high_resolution_clock::now();
+                if (interaction.gravityEnabled) {
+                    parallelPhysics.applyGravityParallel(particles, sphParams.gravity);
+                }
+                t7 = std::chrono::high_resolution_clock::now();
 
-            // Apply gravity (only if enabled)
-            if (interaction.gravityEnabled) {
-                physics.applyGravity(particles);
+                // Phase 9: Compute adaptive timestep
+                adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
+                physics.setTimestep(adaptiveDt);
+                perfMonitor.setAdaptiveTimestep(adaptiveDt);
+                
+                // Phase 9: Stability checks
+                isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
+                perfMonitor.setStabilityStatus(isStable);
+                
+                // Phase 9: Auto-reset if unstable
+                if (!isStable) {
+                    physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+                }
+                
+                // Physics integration
+                parallelPhysics.velocityVerletStep1Parallel(particles, sphParams.dt);
+                parallelPhysics.handleBoundariesParallel(particles, -1.0f, 1.0f, -1.0f, 1.0f, sphParams.damping);
+                parallelPhysics.velocityVerletStep2Parallel(particles, sphParams.dt);
+                t8 = std::chrono::high_resolution_clock::now();
+            } else {
+                // Sequential physics computations (original code)
+                sphSolver.computeDensities(particles, spatialHash);
+                t3 = std::chrono::high_resolution_clock::now();
+                
+                physics.computePressures(particles);
+                t4 = std::chrono::high_resolution_clock::now();
+
+                physics.resetAccelerations(particles);
+
+                physics.computePressureForces(particles, spatialHash);
+                t5 = std::chrono::high_resolution_clock::now();
+
+                physics.computeViscosityForces(particles, spatialHash);
+                t6 = std::chrono::high_resolution_clock::now();
+
+                if (interaction.gravityEnabled) {
+                    physics.applyGravity(particles);
+                }
+                t7 = std::chrono::high_resolution_clock::now();
+
+                // Phase 9: Compute adaptive timestep
+                adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
+                physics.setTimestep(adaptiveDt);
+                perfMonitor.setAdaptiveTimestep(adaptiveDt);
+                
+                // Phase 9: Stability checks
+                isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
+                perfMonitor.setStabilityStatus(isStable);
+                
+                // Phase 9: Auto-reset if unstable
+                if (!isStable) {
+                    physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
+                }
+                
+                // Physics integration
+                physics.velocityVerletStep1(particles);
+                physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
+                physics.velocityVerletStep2(particles);
+                t8 = std::chrono::high_resolution_clock::now();
             }
-            t7 = std::chrono::high_resolution_clock::now();
-
-            // Phase 9: Compute adaptive timestep
-            adaptiveDt = physics.computeAdaptiveTimestep(particles, sphParams.h);
-            physics.setTimestep(adaptiveDt);
-            perfMonitor.setAdaptiveTimestep(adaptiveDt);
-            
-            // Phase 9: Stability checks
-            isStable = physics.checkStability(particles) && physics.validateParticleData(particles);
-            perfMonitor.setStabilityStatus(isStable);
-            
-            // Phase 9: Auto-reset if unstable
-            if (!isStable) {
-                physics.resetSimulationIfUnstable(particles, gridCols, gridRows, gridSpacing, -0.5f, -0.5f);
-            }
-            
-            // Physics integration
-            physics.velocityVerletStep1(particles);
-            physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
-            physics.velocityVerletStep2(particles);
-            t8 = std::chrono::high_resolution_clock::now();
         }
         
         // Phase 11: Handle mouse interactions (add/remove particles) - outside pause check
@@ -748,6 +798,15 @@ int main() {
             }
             if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS) {
                 spawnScenario(particles, Scenario::FOUNTAIN, gridSpacing);
+                lastKeyTime = currentTime;
+            }
+            
+            // Phase 13: Toggle multi-threading with T key
+            if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+                interaction.multiThreadingEnabled = !interaction.multiThreadingEnabled;
+                parallelPhysics.setParallelEnabled(interaction.multiThreadingEnabled);
+                perfMonitor.setThreadInfo(threadPool.size(), interaction.multiThreadingEnabled);
+                std::cout << "[INFO] Multi-threading " << (interaction.multiThreadingEnabled ? "enabled" : "disabled") << std::endl;
                 lastKeyTime = currentTime;
             }
         }
