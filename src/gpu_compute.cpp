@@ -553,8 +553,16 @@ void GPUCompute::applyBoundaries() {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void GPUCompute::step() {
+void GPUCompute::step(float dt) {
     if (!available) return;
+    
+    // Update the timestep parameter for the GPU shaders
+    GPUParams params;
+    glGetBufferSubData(paramsSSBO, 0, sizeof(GPUParams), &params);
+    params.dt = dt;
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, paramsSSBO);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GPUParams), &params);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     
     computeDensities();
     computePressures();

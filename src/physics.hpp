@@ -53,8 +53,8 @@ public:
              float B = 100.0f, float rho0 = 1000.0f, float gamma = 7.0f, float mu = 0.1f)
         : params{dt, gravity, damping, B, rho0, gamma, mu} {}
 
-    void velocityVerletStep1(Particles& particles);
-    void velocityVerletStep2(Particles& particles);
+    void velocityVerletStep1(Particles& particles, float dt);
+    void velocityVerletStep2(Particles& particles, float dt);
     void handleBoundaries(Particles& particles, float left, float right, float bottom, float top);
     void resetAccelerations(Particles& particles);
     void computePressures(Particles& particles);

@@ -67,6 +67,7 @@ public:
     
     // Full simulation step
     void step();
+    void step(float dt);
     
     // Get SSBO IDs for rendering
     GLuint getPositionsSSBO() const { return positionsSSBO; }

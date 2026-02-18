@@ -11,20 +11,20 @@ void Physics::resetAccelerations(Particles& particles) {
     }
 }
 
-void Physics::velocityVerletStep1(Particles& particles) {
+void Physics::velocityVerletStep1(Particles& particles, float dt) {
     size_t n = particles.size();
     
     for (size_t i = 0; i < n; ++i) {
-        particles.velocities[i] += 0.5f * particles.accelerations[i] * params.dt;
-        particles.positions[i] += particles.velocities[i] * params.dt;
+        particles.velocities[i] += 0.5f * particles.accelerations[i] * dt;
+        particles.positions[i] += particles.velocities[i] * dt;
     }
 }
 
-void Physics::velocityVerletStep2(Particles& particles) {
+void Physics::velocityVerletStep2(Particles& particles, float dt) {
     size_t n = particles.size();
     
     for (size_t i = 0; i < n; ++i) {
-        particles.velocities[i] += 0.5f * particles.accelerations[i] * params.dt;
+        particles.velocities[i] += 0.5f * particles.accelerations[i] * dt;
     }
 }
 

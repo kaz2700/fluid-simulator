@@ -559,8 +559,7 @@ int main() {
         state->zoomLevel = glm::clamp(state->zoomLevel, 0.1f, 5.0f);
     });
     
-    // Phase 11: Fixed timestep for interaction timing
-    const float interactionDt = 0.016f;
+    // Phase 11: Use adaptive timestep for interaction timing
     
     while (!glfwWindowShouldClose(window)) {
         auto frameStart = std::chrono::high_resolution_clock::now();
@@ -609,7 +608,7 @@ int main() {
                 t3 = std::chrono::high_resolution_clock::now();
                 
                 // Run GPU simulation step
-                gpuCompute.step();
+                gpuCompute.step(adaptiveDt);
                 
                 t8 = std::chrono::high_resolution_clock::now();
                 t4 = t5 = t6 = t7 = t8;
@@ -619,9 +618,8 @@ int main() {
                                              particles.accelerations, particles.densities,
                                              particles.pressures);
                 
-                // GPU mode doesn't support adaptive timestep yet
+                // GPU mode supports adaptive timestep now
                 adaptiveDt = sphParams.dt;
-                perfMonitor.setAdaptiveTimestep(adaptiveDt);
                 perfMonitor.setStabilityStatus(true);
             } else if (interaction.multiThreadingEnabled) {
                 // Parallel physics computations
@@ -659,9 +657,9 @@ int main() {
                 }
                 
                 // Physics integration
-                parallelPhysics.velocityVerletStep1Parallel(particles, sphParams.dt);
+                parallelPhysics.velocityVerletStep1Parallel(particles, adaptiveDt);
                 parallelPhysics.handleBoundariesParallel(particles, -1.0f, 1.0f, -1.0f, 1.0f, sphParams.damping);
-                parallelPhysics.velocityVerletStep2Parallel(particles, sphParams.dt);
+                parallelPhysics.velocityVerletStep2Parallel(particles, adaptiveDt);
                 t8 = std::chrono::high_resolution_clock::now();
             } else {
                 // Sequential physics computations (original code)
@@ -699,16 +697,16 @@ int main() {
                 }
                 
                 // Physics integration
-                physics.velocityVerletStep1(particles);
+                physics.velocityVerletStep1(particles, adaptiveDt);
                 physics.handleBoundaries(particles, -1.0f, 1.0f, -1.0f, 1.0f);
-                physics.velocityVerletStep2(particles);
+                physics.velocityVerletStep2(particles, adaptiveDt);
                 t8 = std::chrono::high_resolution_clock::now();
             }
         }
         
         // Phase 11: Handle mouse interactions (add/remove particles) - outside pause check
         if (interaction.leftMousePressed) {
-            interaction.particleAddTimer += interactionDt;
+            interaction.particleAddTimer += adaptiveDt;
             if (interaction.particleAddTimer >= interaction.particleAddInterval) {
                 interaction.particleAddTimer = 0.0f;
                 glm::vec2 worldPos = screenToWorld(interaction.lastMouseX, interaction.lastMouseY, 
@@ -732,7 +730,7 @@ int main() {
         if (particles.size() == 0) {
             // If no particles, add some from fountain
             static float fountainTimer = 0.0f;
-            fountainTimer += interactionDt;
+            fountainTimer += adaptiveDt;
             if (fountainTimer > 0.1f) {
                 fountainTimer = 0.0f;
                 particles.addParticle(glm::vec2(0.0f, 0.8f), glm::vec2(0.0f, -3.0f));
